@@ -109,7 +109,7 @@ datatype Leader = Leader(
 predicate LeaderInit(l:Leader, id:Id, accConf:seq<Id>, f:nat, initval:Value) {
     && l.consts == LConsts(id, accConf, f, initval)
     && l.state == P1a
-    && l.ballot == Ballot(0, id.num)
+    && l.ballot == Ballot(0, id.idx)
     && l.val == initval
 }
 
@@ -201,7 +201,7 @@ predicate LeaderProcessPreempt(l:Leader, l':Leader, msg:Message, sendIos:seq<Pac
     if BalLt(l.ballot, msg.bal) then 
         // I am preempted
         && l'.state == P1a
-        && l'.ballot == NextBallot(msg.bal, l.consts.id.num)
+        && l'.ballot == NextBallot(msg.bal, l.consts.id.idx)
         && l'.promises == {}
         && l'.accepts == {}
         && if msg.val == Nil 

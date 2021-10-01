@@ -2,10 +2,10 @@ module Types {
 
 datatype agent = Ldr | Acc
 
-datatype Id = Id(agt:agent, num:nat)
+datatype Id = Id(agt:agent, idx:nat)
 
 datatype Value = V(val:int) | Nil
-datatype Ballot = Ballot(seqNo:nat, num:nat) | Bottom
+datatype Ballot = Ballot(seqNo:nat, idx:nat) | Bottom
 
 datatype Message = Prepare(bal:Ballot)
                 | Promise(bal:Ballot, val:Value)
@@ -22,7 +22,7 @@ predicate BalLt(b1:Ballot, b2:Ballot) {
         case Ballot(seqNo, id) =>
             if b2.Bottom? then false else 
                 if b1.seqNo != b2.seqNo then b1.seqNo < b2.seqNo 
-                else b1.num < b2.num
+                else b1.idx < b2.idx
     }
 }
 
@@ -36,14 +36,14 @@ predicate BalGt(b1:Ballot, b2:Ballot) {
     !BalLtEq(b1, b2)
 }
 
-/* Returns the next largest ballot for non-Bottom ballots, belonging to a given leader num */
-function {:opaque} NextBallot(b:Ballot, num:nat) : (b':Ballot) 
+/* Returns the next largest ballot for non-Bottom ballots, belonging to a given leader idx */
+function {:opaque} NextBallot(b:Ballot, idx:nat) : (b':Ballot) 
     ensures b != Bottom ==> b' != Bottom
     ensures b != Bottom ==> BalGt(b', b)
-    ensures b != Bottom ==> b'.num == num
+    ensures b != Bottom ==> b'.idx == idx
 {
     if b == Bottom then Bottom
-    else Ballot(b.seqNo + 1, num)
+    else Ballot(b.seqNo + 1, idx)
 }
 
 

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+OUTDIR="sloc-metrics/"
+
+files=(`ls *.dfy`)
+timestamp=$(date +"%y-%d-%b-%H%M")
+outfile="$OUTDIR/$timestamp.csv"
+
+if [[ -f $outfile ]]
+then
+    echo "Error: file already exists"
+    exit 1
+fi
+
+echo "file,sloc," >> "$outfile"
+
+for f in ${files[*]}
+do
+    sloc=`python3 count-sloc.py $f`
+    echo "$f,$sloc," >> "$outfile"
+done
+
+echo "Done"
+

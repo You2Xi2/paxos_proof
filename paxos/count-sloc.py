@@ -5,29 +5,29 @@ def countfile(dafny_file):
         lines = f.readlines()
 
     lines = [l.strip() for l in lines if len(l.strip()) > 0]
-    logical_lines = []
+    physical_lines = []
 
-    logical_mode = True
+    physical_mode = True
     for l in lines:
         # Strip comment lines
-        if logical_mode:
+        if physical_mode:
             if "/*" in l:
                 if "*/" not in l:   
                     # Begin multi-line comment
-                    logical_mode = False
+                    physical_mode = False
                 else:
                     continue
             elif len(l) >= 2 and l[:2] == "//":
                 continue
             else:
-                logical_lines.append(l)
+                physical_lines.append(l)
         else:
             if "*/" in l:
                 # End multi-line comment
-                logical_mode = True    
-    # for l in logical_lines:
+                physical_mode = True    
+    # for l in physical_lines:
     #     print(l)
-    print(len(logical_lines))
+    print(len(physical_lines))
 
 
 if __name__ == "__main__":

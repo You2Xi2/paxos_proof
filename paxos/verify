@@ -1,0 +1,16 @@
+#!/bin/bash
+
+OUTDIR="sloc-metrics/"
+
+files=(`ls *.dfy`)
+
+for f in ${files[*]}
+do
+    echo "Checking $f"
+    dafny /timeLimit:20 /compile:0 $f
+    echo ""
+    echo ""
+done
+
+echo "Done"
+

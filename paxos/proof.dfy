@@ -11,35 +11,48 @@ import opened Synod
 
 
 /* If all processes propose v, then every process that decides a value decides v */
-predicate Validity(ds:DistrSys) {
-    (exists v :: AllProcessesProposeV(ds, v)) 
-    ==> 
-    (exists v :: AllProcessesProposeV(ds, v) && AllDecidedProcessesDecidesV(ds, v)) 
+predicate Validity(c:Constants, ds:DistrSys, v:Value) 
+    requires c.WF()
+    requires ds.WF(c)
+{
+    AllProcessesProposeV(c, ds, v) ==> AllDecidedProcessesDecidesV(c, ds, v)
 }
 
-predicate AllProcessesProposeV(ds:DistrSys, v:Value) {
-    forall l | l in ds.leaders :: l.consts.initval == v
+predicate AllProcessesProposeV(c:Constants, ds:DistrSys, v:Value) 
+    requires c.WF()
+    requires ds.WF(c)
+{
+    forall i | c.ValidLdrIdx(i) :: c.ldr_vals[i] == v
 }
 
-predicate AllDecidedProcessesDecidesV(ds:DistrSys, v:Value){
+predicate AllDecidedProcessesDecidesV(c:Constants, ds:DistrSys, v:Value)
+    requires c.WF()
+    requires ds.WF(c)
+{
     forall l | l in ds.leaders && l.state == Decided :: l.val == v
 }
 
 
-predicate Validity_Inv(ds:DistrSys) {
-    && Validity(ds)
+/* Invariants for establishing Validity */
+predicate Validity_Inv(c:Constants, ds:DistrSys, v:Value) 
+{
+    && c.WF()
+    && ds.WF(c)
+    && Validity(c, ds, v)
 }
 
 
-lemma InitImpliesInv(c:Constants, ds:DistrSys) 
+/* Init ==>  Validity_Inv */
+lemma InitImpliesInv(c:Constants, ds:DistrSys, v:Value) 
     requires Init(c, ds)
-    ensures Validity_Inv(ds)
+    ensures Validity_Inv(c, ds, v)
 {}
 
-lemma NextPreservesInv(c:Constants, ds:DistrSys, ds':DistrSys) 
-    requires Validity_Inv(ds)
+/* Validity_Inv && Next ==>  Validity_Inv' */
+lemma NextPreservesInv(c:Constants, v:Value, ds:DistrSys, ds':DistrSys) 
+    requires Validity_Inv(c, ds, v)
     requires Next(c, ds, ds')
-    ensures Validity_Inv(ds')
+    ensures Validity_Inv(c, ds', v)
 {
     // TODO
     assume false;

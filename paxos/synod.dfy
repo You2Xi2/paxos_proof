@@ -8,10 +8,11 @@ import opened Agents
 import opened Types
 
 
-datatype Constants = Constants(f:nat, ldr_ids:seq<Id>, acc_ids:seq<Id>) {
+datatype Constants = Constants(f:nat, ldr_ids:seq<Id>, ldr_vals:seq<Value>, acc_ids:seq<Id>) {
     predicate WF() {
         && f >= 1
         && |ldr_ids| >= 1
+        && |ldr_vals| == |ldr_ids|
         && |acc_ids| == 2*f+1
         && ValidTypes()
         && UniqueIds()
@@ -31,8 +32,8 @@ datatype Constants = Constants(f:nat, ldr_ids:seq<Id>, acc_ids:seq<Id>) {
     }
 
     predicate UniqueIds() {
-        && (forall i:nat, j:nat | ValidLdrIdx(i) && ValidLdrIdx(j) && ldr_ids[i]==ldr_ids[j] :: i == j)
-        && (forall i:nat, j:nat | ValidAccIdx(i) && ValidAccIdx(j) && acc_ids[i]==acc_ids[j] :: i == j)
+        && (forall i, j | ValidLdrIdx(i) && ValidLdrIdx(j) && ldr_ids[i]==ldr_ids[j] :: i == j)
+        && (forall i, j | ValidAccIdx(i) && ValidAccIdx(j) && acc_ids[i]==acc_ids[j] :: i == j)
     }
 }
 
@@ -47,6 +48,7 @@ datatype DistrSys = DistrSys(
         && |leaders| == |c.ldr_ids|
         && |acceptors| == |c.acc_ids|
         && (forall i | c.ValidLdrIdx(i) :: leaders[i].consts.id == c.ldr_ids[i])
+        && (forall i | c.ValidLdrIdx(i) :: leaders[i].consts.initval == c.ldr_vals[i])
         && (forall i | c.ValidAccIdx(i) :: acceptors[i].consts.id == c.acc_ids[i])
     }
 }
@@ -58,10 +60,11 @@ datatype DistrSys = DistrSys(
 predicate Init(c:Constants, s:DistrSys) 
 {
     && c.WF()
+    && s.WF(c)
     && EnvironmentInit(s.network)
     && |s.leaders| == |c.ldr_ids|
     && |s.acceptors| == |c.acc_ids|
-    && (forall i | c.ValidLdrIdx(i) :: LeaderInit(s.leaders[i], c.ldr_ids[i], c.acc_ids, c.f, V(i)))
+    && (forall i | c.ValidLdrIdx(i) :: LeaderInit(s.leaders[i], c.ldr_ids[i], c.acc_ids, c.f, c.ldr_vals[i]))
     && (forall i | c.ValidAccIdx(i) :: AcceptorInit(s.acceptors[i], c.acc_ids[i]))
 }
 

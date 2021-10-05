@@ -19,10 +19,8 @@ datatype DistrSys = DistrSys(
 *                                        DS Init                                         *
 *****************************************************************************************/
 predicate Init(s:DistrSys, f:nat, l:nat, accConf:seq<Id>) 
-    requires f >= 1;
-    requires l >= 1;
-    requires ValidAccConf(f, accConf)
 {
+    && ValidConf(f, l, accConf)
     && EnvironmentInit(s.network)
     && |s.leaders| == l
     && (forall i | 0 <= i < l :: LeaderInit(s.leaders[i], Id(Ldr, i), accConf, f, V(i)))
@@ -30,7 +28,9 @@ predicate Init(s:DistrSys, f:nat, l:nat, accConf:seq<Id>)
     && (forall i | 0 <= i < 2*f+1 :: AcceptorInit(s.acceptors[i], accConf[i]))
 }
 
-predicate ValidAccConf(f:nat, accConf:seq<Id>) {
+predicate ValidConf(f:nat, l:nat, accConf:seq<Id>) {
+    && f >= 1
+    && l >= 1
     && |accConf| == 2*f+1
     && (forall i | 0 <= i < |accConf| :: accConf[i] == Id(Acc, i))
 }

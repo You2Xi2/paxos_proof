@@ -45,6 +45,11 @@ predicate ValidAccConf(f:nat, accConf:seq<Id>) {
 *                                        DS Next                                         *
 *****************************************************************************************/
 
+predicate Next(s:DistrSys, s':DistrSys) {
+    exists src, recvIos, sendIos :: PaxosNextOneAgent(s, s', src, recvIos, sendIos)
+}
+
+
 predicate PaxosNextOneAgent(s:DistrSys, s':DistrSys, src:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
 {
     && ValidSrc(s, src)

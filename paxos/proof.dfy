@@ -31,14 +31,14 @@ predicate Validity_Inv(ds:DistrSys) {
 }
 
 
-lemma InitImpliesInv(ds:DistrSys, f:nat, l:nat, accConf:seq<Id>) 
-    requires Init(ds, f, l, accConf)
+lemma InitImpliesInv(c:Constants, ds:DistrSys) 
+    requires Init(c, ds)
     ensures Validity_Inv(ds)
 {}
 
-lemma NextPreservesInv(ds:DistrSys, ds':DistrSys) 
+lemma NextPreservesInv(c:Constants, ds:DistrSys, ds':DistrSys) 
     requires Validity_Inv(ds)
-    requires Next(ds, ds')
+    requires Next(c, ds, ds')
     ensures Validity_Inv(ds')
 {
     // TODO

@@ -87,7 +87,7 @@ predicate AcceptorPreempt(a:Acceptor, a':Acceptor, recvIo:Packet, sendIos:seq<Pa
     && sendIos[0].msg == Preempt(a.promised, a.accepted)
     && a'.promised == a.promised
     && a'.accepted == a.accepted
-    // Bug: a'.promised and a'.accepted unspecified
+    // Bug 1: a'.promised and a'.accepted unspecified
 }
 
 
@@ -182,7 +182,8 @@ predicate LeaderProcessValidPromise(l:Leader, l':Leader, src:Id, msg:Message, se
     requires msg.Promise?
     requires l.state == P1b
 {
-    if |l.promises| == 2*l.consts.f then 
+    && sendIos == []    // Bug 2: left out this line, so sendIos was unspecified
+    && if |l.promises| == 2*l.consts.f then 
         // Go to phase 2a
         && l'.state == P2a
         && l'.ballot == l.ballot
@@ -200,7 +201,8 @@ predicate LeaderProcessValidPromise(l:Leader, l':Leader, src:Id, msg:Message, se
 predicate LeaderProcessPreempt(l:Leader, l':Leader, msg:Message, sendIos:seq<Packet>) 
     requires msg.Preempt?
 {
-    if BalLt(l.ballot, msg.bal) then 
+    && sendIos == []    // Bug 2: left out this line, so sendIos was unspecified
+    && if BalLt(l.ballot, msg.bal) then 
         // I am preempted
         && l'.state == P1a
         && l'.ballot == NextBallot(msg.bal, l.consts.id.idx)

@@ -85,6 +85,8 @@ predicate AcceptorPreempt(a:Acceptor, a':Acceptor, recvIo:Packet, sendIos:seq<Pa
     && sendIos[0].src == a.consts.id
     && sendIos[0].dst == recvIo.src
     && sendIos[0].msg == Preempt(a.promised, a.accepted)
+    && a'.promised == a.promised
+    && a'.accepted == a.accepted
     // Bug: a'.promised and a'.accepted unspecified
 }
 

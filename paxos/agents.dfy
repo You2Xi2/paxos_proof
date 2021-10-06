@@ -269,7 +269,8 @@ predicate LeaderProcessValidAccept(l:Leader, l':Leader, src:Id, msg:Message, sen
     requires msg.Accept?
     requires l.state == P2b
 {
-    if |l.accepts| == 2*l.consts.f then 
+    && sendIos == []    // Bug 3: left out this line, so sendIos was unspecified
+    && if |l.accepts| == 2*l.consts.f then 
         // Go to Decided state
         && l'.state == Decided
         && l'.ballot == l.ballot

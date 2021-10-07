@@ -10,6 +10,10 @@ import opened Types
 import opened Synod
 
 
+/*****************************************************************************************
+*                                       Validity                                         *
+*****************************************************************************************/
+
 /* If all processes propose v, then every process that decides a value decides v */
 predicate Validity(c:Constants, ds:DistrSys, v:Value) 
     requires c.WF()
@@ -76,18 +80,110 @@ predicate Validity_Inv_AllLdrProposeV(c:Constants, ds:DistrSys, v:Value)
 }
 
 
-/* Init ==>  Validity_Inv */
-lemma InitImpliesInv(c:Constants, ds:DistrSys, v:Value) 
+/* Init ==> Validity_Inv */
+lemma InitImpliesValidityInv(c:Constants, ds:DistrSys, v:Value) 
     requires Init(c, ds)
     ensures Validity_Inv(c, ds, v)
 {}
 
 
-/* Validity_Inv && Next ==>  Validity_Inv' */
-lemma NextPreservesInv(c:Constants, v:Value, ds:DistrSys, ds':DistrSys) 
+/* Validity_Inv && Next ==> Validity_Inv' */
+lemma NextPreservesVakidityInv(c:Constants, v:Value, ds:DistrSys, ds':DistrSys) 
     requires Validity_Inv(c, ds, v)
     requires Next(c, ds, ds')
     ensures Validity_Inv(c, ds', v)
 {}
+
+
+/*****************************************************************************************
+*                                      Agreement                                         *
+*****************************************************************************************/
+
+/* All correct processes decide the same value */
+predicate Agreement(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+    requires c.WF()
+    requires ds.WF(c)
+{
+    SomeProcessDecidedV(c, ds, v, b) ==> AllDecidedProcessesDecidesV(c, ds, v)
+}
+
+predicate SomeProcessDecidedV(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+    requires c.WF()
+    requires ds.WF(c)
+{
+    exists i :: 
+    && c.ValidLdrIdx(i) 
+    && ds.leaders[i].state == Decided 
+    && ds.leaders[i].val == v
+    && ds.leaders[i].ballot == b
+}
+
+
+/* Invariants for establishing Agreement */
+predicate Agreement_Inv(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+{
+    && c.WF()
+    && ds.WF(c)
+    && Agreement(c, ds, v, b)
+    && Agreement_Inv_AcceptedByQuorum(c, ds, v, b)
+    && Agreement_Inv_Messages(c, ds, v, b)
+    && Agreement_Inv_P2Leaders(c, ds, v, b)
+}
+
+predicate Agreement_Inv_AcceptedByQuorum(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    SomeProcessDecidedV(c, ds, v, b) ==> (
+        exists quorum ::
+            && QuorumOfAcceptors(c, quorum)
+            && forall idx | idx in quorum ::
+                && ds.acceptors[idx].accepted == v
+                && BalLtEq(b, ds.acceptors[idx].promised)
+    )
+}
+
+predicate Agreement_Inv_Messages(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    SomeProcessDecidedV(c, ds, v, b) 
+    ==> 
+    (forall pkt | pkt in ds.network.sentPackets && BalLtEq(b, pkt.msg.bal )
+    :: MessageContainsV(pkt.msg, v))
+}
+
+predicate Agreement_Inv_P2Leaders(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    SomeProcessDecidedV(c, ds, v, b) 
+    ==> 
+    (forall i | 
+        && c.ValidLdrIdx(i) 
+        && LeaderInPhase2(c, i, ds) 
+        && BalLtEq(b, ds.leaders[i].ballot)
+    :: ds.leaders[i].val == v)
+}
+
+
+/* Init ==> Agreement_Inv */
+lemma InitImpliesAgreementInv(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+    requires Init(c, ds)
+    ensures Agreement_Inv(c, ds, v, b)
+{}
+
+
+/* Agreement_Inv && Next ==> Agreement_Inv' */
+lemma NextPreservesAgreementInv(c:Constants, v:Value, b:Ballot, ds:DistrSys, ds':DistrSys) 
+    requires Agreement_Inv(c, ds, v, b)
+    requires Next(c, ds, ds')
+    ensures Agreement_Inv(c, ds', v, b)
+{
+    // TODO
+    if SomeProcessDecidedV(c, ds', v, b){
+        assert Agreement_Inv_AcceptedByQuorum(c, ds', v, b);
+        assert Agreement_Inv_Messages(c, ds', v, b);
+        assert Agreement_Inv_P2Leaders(c, ds', v, b);
+        assert Agreement(c, ds', v, b);
+    }
+}
 
 }

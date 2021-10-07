@@ -112,4 +112,24 @@ predicate ValidSrc(s:DistrSys, src:Id) {
         case Acc() => 0 <= src.idx < |s.acceptors|
     }
 }
+
+
+/*****************************************************************************************
+*                                        Utils                                           *
+*****************************************************************************************/
+
+predicate QuorumOfAcceptors(c:Constants, q:set<int>) 
+    requires c.WF()
+{
+    && |q| >= c.f + 1
+    && forall idx | idx in q :: c.ValidAccIdx(idx)
+}
+
+predicate LeaderInPhase2(c:Constants, idx:int, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrIdx(idx)
+{
+    ds.leaders[idx].state == P2a || ds.leaders[idx].state == P2b
+}
+
 }

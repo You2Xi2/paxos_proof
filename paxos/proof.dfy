@@ -111,11 +111,12 @@ predicate SomeProcessDecidedV(c:Constants, ds:DistrSys, v:Value, b:Ballot)
     requires c.WF()
     requires ds.WF(c)
 {
-    exists i :: 
-    && c.ValidLdrIdx(i) 
-    && ds.leaders[i].state == Decided 
-    && ds.leaders[i].val == v
-    && ds.leaders[i].ballot == b
+    && b != Bottom
+    && exists i :: 
+        && c.ValidLdrIdx(i) 
+        && ds.leaders[i].state == Decided 
+        && ds.leaders[i].val == v
+        && ds.leaders[i].ballot == b
 }
 
 
@@ -125,10 +126,12 @@ predicate Agreement_Inv(c:Constants, ds:DistrSys, v:Value, b:Ballot)
     && c.WF()
     && ds.WF(c)
     && Agreement(c, ds, v, b)
-    && Agreement_Inv_AcceptedByQuorum(c, ds, v, b)
+    // && Agreement_Inv_AcceptedByQuorum(c, ds, v, b)
+    && Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds, v, b)
     && Agreement_Inv_Messages(c, ds, v, b)
     && Agreement_Inv_P2Leaders(c, ds, v, b)
 }
+
 
 predicate Agreement_Inv_AcceptedByQuorum(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
     requires c.WF() && ds.WF(c)
@@ -136,9 +139,27 @@ predicate Agreement_Inv_AcceptedByQuorum(c:Constants, ds:DistrSys, v:Value, b:Ba
     SomeProcessDecidedV(c, ds, v, b) ==> (
         exists quorum ::
             && QuorumOfAcceptors(c, quorum)
-            && forall idx | idx in quorum ::
-                && ds.acceptors[idx].accepted == v
-                && BalLtEq(b, ds.acceptors[idx].promised)
+            && AcceptedByQuroum(c, ds, quorum, v, b)
+    )
+}
+
+predicate AcceptedByQuroum(c:Constants, ds:DistrSys, q:set<int>, v:Value, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+    requires QuorumOfAcceptors(c, q)
+{
+    forall idx | idx in q ::
+        && ds.acceptors[idx].accepted == v
+        && BalLtEq(b, ds.acceptors[idx].promised)
+}
+
+
+/* Any acceptor with promised >= b has accepted v */
+predicate Agreement_Inv_PromisebImpliesAcceptedValueV(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    SomeProcessDecidedV(c, ds, v, b) ==> 
+    (forall i |c.ValidAccIdx(i) && BalLtEq(b, ds.acceptors[i].promised)
+        :: ds.acceptors[i].accepted == v
     )
 }
 
@@ -177,9 +198,39 @@ lemma NextPreservesAgreementInv(c:Constants, v:Value, b:Ballot, ds:DistrSys, ds'
     requires Next(c, ds, ds')
     ensures Agreement_Inv(c, ds', v, b)
 {
-    // TODO
     if SomeProcessDecidedV(c, ds', v, b){
-        assert Agreement_Inv_AcceptedByQuorum(c, ds', v, b);
+        if SomeProcessDecidedV(c, ds, v, b) {
+            var src, recvIos:seq<Packet>, sendIos:seq<Packet> :| PaxosNextOneAgent(c, ds, ds', src, recvIos, sendIos);
+            if src.agt.Ldr? {
+                assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
+            } else {
+                var a, a' := ds.acceptors[src.idx], ds'.acceptors[src.idx];
+                var m := recvIos[0].msg;
+                match m {
+                    case Prepare(bal) => 
+                        assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
+                    case Propose(bal, val) => 
+                        assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
+                    case _ =>
+                        assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
+                }
+
+
+
+
+                // TODO
+                // assume false;
+                assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
+            }
+        } else {
+            assume false;
+            assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
+        }
+
+
+
+        // TODO
+        assume false;
         assert Agreement_Inv_Messages(c, ds', v, b);
         assert Agreement_Inv_P2Leaders(c, ds', v, b);
         assert Agreement(c, ds', v, b);

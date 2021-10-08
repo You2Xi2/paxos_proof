@@ -23,24 +23,24 @@ predicate AcceptorInit(a:Acceptor, id:Id) {
 }
 
 /* Acceptor next state */
-predicate AcceptorNext(a:Acceptor, a':Acceptor, recvIos:seq<Packet>, sendIo:seq<Packet>) {
+predicate AcceptorNext(a:Acceptor, a':Acceptor, recvIos:seq<Packet>, sendIos:seq<Packet>) {
     && a'.consts == a.consts
     && |recvIos| == 1
     && match recvIos[0].msg {
-        case Prepare(bal) => AcceptorNext_RcvPrepare(a, a', recvIos[0], sendIo)
-        case Propose(bal, val) => AcceptorNext_RcvPropose(a, a', recvIos[0], sendIo)
-        case _ => a == a' && sendIo == []
+        case Prepare(bal) => AcceptorNext_RcvPrepare(a, a', recvIos[0], sendIos)
+        case Propose(bal, val) => AcceptorNext_RcvPropose(a, a', recvIos[0], sendIos)
+        case _ => a == a' && sendIos == []
     }
 }
 
 /* Acceptor next state, process Prepare message */
-predicate AcceptorNext_RcvPrepare(a:Acceptor, a':Acceptor, recvIo:Packet, sendIo:seq<Packet>) 
+predicate AcceptorNext_RcvPrepare(a:Acceptor, a':Acceptor, recvIo:Packet, sendIos:seq<Packet>) 
     requires recvIo.msg.Prepare?
 {   
     if BalLt(a.promised, recvIo.msg.bal) then
-        AcceptorPromise(a, a', recvIo, sendIo)
+        AcceptorPromise(a, a', recvIo, sendIos)
     else 
-        AcceptorPreempt(a, a', recvIo, sendIo)
+        AcceptorPreempt(a, a', recvIo, sendIos)
 }
 
 /* Acceptor next state, process Accept message */

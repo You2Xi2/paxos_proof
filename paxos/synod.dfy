@@ -15,6 +15,7 @@ datatype Constants = Constants(f:nat, ldr_ids:seq<Id>, ldr_vals:seq<Value>, acc_
         && |ldr_vals| == |ldr_ids|
         && |acc_ids| == 2*f+1
         && ValidTypes()
+        && ValidIds()
         && UniqueIds()
     }
 
@@ -34,6 +35,11 @@ datatype Constants = Constants(f:nat, ldr_ids:seq<Id>, ldr_vals:seq<Value>, acc_
     predicate UniqueIds() {
         && (forall i, j | ValidLdrIdx(i) && ValidLdrIdx(j) && ldr_ids[i]==ldr_ids[j] :: i == j)
         && (forall i, j | ValidAccIdx(i) && ValidAccIdx(j) && acc_ids[i]==acc_ids[j] :: i == j)
+    }
+
+    predicate ValidIds() {
+        && (forall i | ValidLdrIdx(i) :: ldr_ids[i].idx == i)
+        && (forall i | ValidAccIdx(i) :: acc_ids[i].idx == i)
     }
 }
 
@@ -77,20 +83,22 @@ predicate Next(c:Constants, s:DistrSys, s':DistrSys) {
     && c.WF()
     && s.WF(c)
     && s'.WF(c)
-    && exists src, recvIos, sendIos :: PaxosNextOneAgent(s, s', src, recvIos, sendIos)
+    && exists src, recvIos, sendIos :: PaxosNextOneAgent(c, s, s', src, recvIos, sendIos)
 }
 
 
-predicate PaxosNextOneAgent(s:DistrSys, s':DistrSys, src:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+predicate PaxosNextOneAgent(c:Constants, s:DistrSys, s':DistrSys, src:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires c.WF() && s.WF(c) && s'.WF(c)
 {
-    && ValidSrc(s, src)
-    && PaxosNextOneAgent_Agent(s, s', src, recvIos, sendIos)
+    && ValidSrc(c, src)
+    && PaxosNextOneAgent_Agent(c, s, s', src, recvIos, sendIos)
     && s.network.nextStep == IoStep(src, recvIos, sendIos)
     && EnvironmentNext(s.network, s'.network)
 }
 
-predicate PaxosNextOneAgent_Agent(s:DistrSys, s':DistrSys, src:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
-    requires ValidSrc(s, src)
+predicate PaxosNextOneAgent_Agent(c:Constants, s:DistrSys, s':DistrSys, src:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
+    requires c.WF() && s.WF(c) && s'.WF(c)
+    requires ValidSrc(c, src)
 {
     match src.agt {
         case Ldr() => 
@@ -106,10 +114,12 @@ predicate PaxosNextOneAgent_Agent(s:DistrSys, s':DistrSys, src:Id, recvIos:seq<P
     }
 }
 
-predicate ValidSrc(s:DistrSys, src:Id) {
+predicate ValidSrc(c:Constants, src:Id) 
+    requires c.WF()
+{
      match src.agt {
-        case Ldr() => 0 <= src.idx < |s.leaders|
-        case Acc() => 0 <= src.idx < |s.acceptors|
+        case Ldr => c.ValidLdrIdx(src.idx)
+        case Acc => c.ValidAccIdx(src.idx)
     }
 }
 

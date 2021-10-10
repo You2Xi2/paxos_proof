@@ -126,8 +126,7 @@ predicate Agreement_Inv(c:Constants, ds:DistrSys, v:Value, b:Ballot)
     && c.WF()
     && ds.WF(c)
     && Agreement(c, ds, v, b)
-    // && Agreement_Inv_AcceptedByQuorum(c, ds, v, b)
-    && Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds, v, b)
+    && Agreement_Inv_AcceptedByQuorum(c, ds, v, b)
     && Agreement_Inv_Messages(c, ds, v, b)
     && Agreement_Inv_P2Leaders(c, ds, v, b)
 }
@@ -153,16 +152,6 @@ predicate AcceptedByQuroum(c:Constants, ds:DistrSys, q:set<int>, v:Value, b:Ball
 }
 
 
-/* Any acceptor with promised >= b has accepted v */
-predicate Agreement_Inv_PromisebImpliesAcceptedValueV(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
-    requires c.WF() && ds.WF(c)
-{
-    SomeProcessDecidedV(c, ds, v, b) ==> 
-    (forall i |c.ValidAccIdx(i) && BalLtEq(b, ds.acceptors[i].promised)
-        :: ds.acceptors[i].accepted == v
-    )
-}
-
 predicate Agreement_Inv_Messages(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
     requires c.WF() && ds.WF(c)
 {
@@ -170,6 +159,14 @@ predicate Agreement_Inv_Messages(c:Constants, ds:DistrSys, v:Value, b:Ballot)
     ==> 
     (forall pkt | pkt in ds.network.sentPackets && BalLtEq(b, pkt.msg.bal )
     :: MessageContainsV(pkt.msg, v))
+}
+
+predicate ProposeAndPreemptContainsV(m:Message , v:Value) {
+    match m {
+        case Propose(bal, val) => val == v
+        case Preempt(bal, val) => val == v
+        case _ => true
+    }
 }
 
 predicate Agreement_Inv_P2Leaders(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
@@ -198,43 +195,12 @@ lemma NextPreservesAgreementInv(c:Constants, v:Value, b:Ballot, ds:DistrSys, ds'
     requires Next(c, ds, ds')
     ensures Agreement_Inv(c, ds', v, b)
 {
-    if SomeProcessDecidedV(c, ds', v, b){
-        if SomeProcessDecidedV(c, ds, v, b) {
-            var src, recvIos:seq<Packet>, sendIos:seq<Packet> :| PaxosNextOneAgent(c, ds, ds', src, recvIos, sendIos);
-            if src.agt.Ldr? {
-                assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
-            } else {
-                var a, a' := ds.acceptors[src.idx], ds'.acceptors[src.idx];
-                var m := recvIos[0].msg;
-                match m {
-                    case Prepare(bal) => 
-                        assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
-                    case Propose(bal, val) => 
-                        assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
-                    case _ =>
-                        assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
-                }
-
-
-
-
-                // TODO
-                // assume false;
-                assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
-            }
-        } else {
-            assume false;
-            assert Agreement_Inv_PromisebImpliesAcceptedValueV(c, ds', v, b);
-        }
-
-
-
-        // TODO
-        assume false;
-        assert Agreement_Inv_Messages(c, ds', v, b);
-        assert Agreement_Inv_P2Leaders(c, ds', v, b);
-        assert Agreement(c, ds', v, b);
+    // TODO
+    assume false;
+    assert Agreement_Inv_AcceptedByQuorum(c, ds', v, b);
+    assert Agreement_Inv_Messages(c, ds', v, b);
+    assert Agreement_Inv_P2Leaders(c, ds', v, b);
+    assert Agreement(c, ds', v, b);
     }
-}
 
 }

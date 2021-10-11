@@ -12,8 +12,8 @@ datatype Constants = Constants(f:nat, ldr_ids:seq<Id>, ldr_vals:seq<Value>, acc_
     predicate WF() {
         && f >= 1
         && |ldr_ids| >= 1
-        && |ldr_vals| == |ldr_ids|
         && |acc_ids| == 2*f+1
+        && ValidLdrVals()
         && ValidTypes()
         && ValidIds()
         && UniqueIds()
@@ -30,6 +30,11 @@ datatype Constants = Constants(f:nat, ldr_ids:seq<Id>, ldr_vals:seq<Value>, acc_
     predicate ValidTypes() {
         && (forall l | l in ldr_ids :: l.agt.Ldr?)
         && (forall l | l in acc_ids :: l.agt.Acc?)
+    }
+
+    predicate ValidLdrVals() {
+        && |ldr_vals| == |ldr_ids|
+        && forall i | ValidLdrIdx(i) :: ldr_vals[i] != Nil
     }
 
     predicate UniqueIds() {

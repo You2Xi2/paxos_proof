@@ -8,12 +8,14 @@ datatype Value = V(val:int) | Nil
 datatype Ballot = Ballot(seqNo:nat, idx:nat) | Bottom
 
 datatype Message = Prepare(bal:Ballot)
-                | Promise(bal:Ballot, val:Value)
+                | Promise(bal:Ballot, val:Value, valbal:Ballot)  //valbal is the ballot with which the value was accepted
                 | Propose(bal:Ballot, val:Value)
                 | Accept(bal:Ballot)
                 | Preempt(bal:Ballot, val:Value)
 
 datatype Packet = Packet(src:Id, dst:Id, msg:Message)
+
+datatype Promise = Pro(src:Id, val:Value, valbal:Ballot)
 
 /* True iff b1 < b2 */
 predicate BalLt(b1:Ballot, b2:Ballot) {

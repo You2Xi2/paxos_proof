@@ -58,7 +58,7 @@ predicate Validity_Inv_AllMessegesContainV(c:Constants, ds:DistrSys, v:Value)
 predicate MessageContainsV(m: Message, v:Value) {
     match m {
         case Prepare(bal) => true
-        case Promise(bal, val) => val != v ==> val == Nil
+        case Promise(bal, val, valbal) => val != v ==> val == Nil
         case Propose(bal, val) => val == v
         case Accept(bal) =>  true
         case Preempt(bal, val) => val != v ==> val == Nil

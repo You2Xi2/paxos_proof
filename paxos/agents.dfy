@@ -62,7 +62,7 @@ predicate AcceptorPromise(a:Acceptor, a':Acceptor, recvIo:Packet, sendIos:seq<Pa
     && |sendIos| == 1
     && sendIos[0].src == a.consts.id
     && sendIos[0].dst == recvIo.src
-    && sendIos[0].msg == Promise(a.promised, a.accepted)
+    && sendIos[0].msg == Promise(recvIo.msg.bal, a.accepted, a.promised)
 }
 
 /* Acceptor send Accept */
@@ -103,7 +103,7 @@ datatype Leader = Leader(
     state:LeaderState,
     ballot:Ballot,
     val:Value,
-    promises:set<Id>,
+    promises:set<Promise>,
     accepts:set<Id>
 )
 
@@ -155,7 +155,7 @@ predicate LeaderNext_P1b(l:Leader, l':Leader, recvIos:seq<Packet>, sendIos:seq<P
     && |recvIos| == 1 
     && match recvIos[0].msg {
         case Prepare(bal) => LeaderStutter(l, l', sendIos)
-        case Promise(bal, val) => LeaderProcessPromise(l, l', recvIos[0], sendIos)
+        case Promise(bal, val, valbal) => LeaderProcessPromise(l, l', recvIos[0], sendIos)
         case Propose(bal, val) => LeaderStutter(l, l', sendIos)
         case Accept(bal) =>  LeaderStutter(l, l', sendIos)
         case Preempt(bal, val) => LeaderProcessPreempt(l, l', recvIos[0].msg, sendIos)
@@ -171,7 +171,7 @@ predicate LeaderProcessPromise(l:Leader, l':Leader, pkt:Packet, sendIos:seq<Pack
     requires l.state == P1b
 {
     var src, msg := pkt.src, pkt.msg;
-    if msg.bal == l.ballot && src !in l.promises then
+    if msg.bal == l.ballot && !exists p :: p in l.promises && p.src == src then
         LeaderProcessValidPromise(l, l', src, msg, sendIos)
     else 
         // This is a stale promise
@@ -181,20 +181,30 @@ predicate LeaderProcessPromise(l:Leader, l':Leader, pkt:Packet, sendIos:seq<Pack
 predicate LeaderProcessValidPromise(l:Leader, l':Leader, src:Id, msg:Message, sendIos:seq<Packet>) 
     requires msg.Promise?
     requires l.state == P1b
+    requires msg.bal == l.ballot
+    requires !exists p :: p in l.promises && p.src == src
 {
+    // Bug 6: The leader is supposed to propose the value accepted with the highest prior 
+    // ballot from its quorum of Promise messages. However, in this case, I just pick the 
+    // value of the last Promise I receive. This violates correctness the same way as Sam 
+    // Sillydoodle in Problem Set 2. 
+
     && sendIos == []    // Bug 2: left out this line, so sendIos was unspecified
-    && if |l.promises| == 2*l.consts.f then 
+    && if |l.promises| == 2*l.consts.f + 1 then 
         // Go to phase 2a
         && l'.state == P2a
         && l'.ballot == l.ballot
-        && l'.val == (if msg.val == Nil then l.val else msg.val)
+        // && l'.val == (if msg.val == Nil then l.val else msg.val)  // Bug 6
+        && l'.val == (if PromiseWithHighestBallot(l.promises).val == Nil 
+                    then l.val 
+                    else PromiseWithHighestBallot(l.promises).val)
         && l'.promises == {}
         && l'.accepts == {}
     else 
         && l'.state == l.state
         && l'.ballot == l.ballot
-        && l'.val == (if msg.val == Nil then l.val else msg.val)
-        && l'.promises == l.promises + {src}
+        && l'.val == l.val
+        && l'.promises == l.promises + {PromFromPromiseMessage(src, msg)}
         && l'.accepts == l.accepts
 }
 
@@ -246,7 +256,7 @@ predicate LeaderNext_P2b(l:Leader, l':Leader, recvIos:seq<Packet>, sendIos:seq<P
     && |recvIos| == 1 
     && match recvIos[0].msg {
         case Prepare(bal) => LeaderStutter(l, l', sendIos)
-        case Promise(bal, val) => LeaderStutter(l, l', sendIos)
+        case Promise(bal, val, valbal) => LeaderStutter(l, l', sendIos)
         case Propose(bal, val) => LeaderStutter(l, l', sendIos)
         case Accept(bal) =>  LeaderProcessAccept(l, l', recvIos[0], sendIos)
         case Preempt(bal, val) => LeaderProcessPreempt(l, l', recvIos[0].msg, sendIos)
@@ -284,4 +294,26 @@ predicate LeaderProcessValidAccept(l:Leader, l':Leader, src:Id, msg:Message, sen
         && l'.promises == l.promises
         && l'.accepts == l.accepts + {src}
 }
+
+
+/*****************************************************************************************
+*                                        Utils                                           *
+*****************************************************************************************/
+
+
+function {:opaque} PromFromPromiseMessage(src:Id, msg:Message) : (p:Promise)
+    requires msg.Promise?
+    ensures p.src == src
+    ensures p.val == msg.val
+    ensures p.valbal == msg.valbal
+{
+    Pro(src, msg.val, msg.valbal)
+}
+
+
+function PromiseWithHighestBallot(pset:set<Promise>) : (p:Promise) 
+    requires |pset| > 0
+    ensures p in pset
+    ensures forall p' | p' in pset :: BalLtEq(p'.valbal, p.valbal)
+
 }

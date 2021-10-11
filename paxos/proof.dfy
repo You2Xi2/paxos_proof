@@ -76,7 +76,11 @@ predicate Validity_Inv_AllLdrProposeV(c:Constants, ds:DistrSys, v:Value)
     requires c.WF()
     requires ds.WF(c)
 {
-    AllProcessesInitV(c, ds, v) ==> forall i | c.ValidLdrIdx(i) :: ds.leaders[i].val == v
+    AllProcessesInitV(c, ds, v) ==> 
+    && (forall i | c.ValidLdrIdx(i) :: ds.leaders[i].val == v)
+    && (forall i | c.ValidLdrIdx(i) :: 
+            forall p | p in ds.leaders[i].promises 
+            :: p.val != Nil ==> p.val == v)
 }
 
 
@@ -157,8 +161,8 @@ predicate Agreement_Inv_Messages(c:Constants, ds:DistrSys, v:Value, b:Ballot)
 {
     SomeProcessDecidedV(c, ds, v, b) 
     ==> 
-    (forall pkt | pkt in ds.network.sentPackets && BalLtEq(b, pkt.msg.bal )
-    :: MessageContainsV(pkt.msg, v))
+    (forall pkt | pkt in ds.network.sentPackets && BalLtEq(b, pkt.msg.bal)
+    :: ProposeAndPreemptContainsV(pkt.msg, v))
 }
 
 predicate ProposeAndPreemptContainsV(m:Message , v:Value) {

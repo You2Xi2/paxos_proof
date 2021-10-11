@@ -113,6 +113,7 @@ predicate LeaderInit(l:Leader, id:Id, accConf:seq<Id>, f:nat, initval:Value) {
     && l.state == P1a
     && l.ballot == Ballot(0, id.idx)
     && l.val == initval
+    && l.promises == {}   // Bug 8: This line was omitted
 }
 
 /* Leader next state */
@@ -190,14 +191,15 @@ predicate LeaderProcessValidPromise(l:Leader, l':Leader, src:Id, msg:Message, se
     // Sillydoodle in Problem Set 2. 
 
     && sendIos == []    // Bug 2: left out this line, so sendIos was unspecified
-    && if |l.promises| == 2*l.consts.f + 1 then 
+    && if |l.promises| == 2*l.consts.f then 
         // Go to phase 2a
+        var promises := l.promises + {PromFromPromiseMessage(src, msg)};
         && l'.state == P2a
         && l'.ballot == l.ballot
         // && l'.val == (if msg.val == Nil then l.val else msg.val)  // Bug 6
-        && l'.val == (if PromiseWithHighestBallot(l.promises).val == Nil 
+        && l'.val == (if PromiseWithHighestBallot(promises).val == Nil 
                     then l.val 
-                    else PromiseWithHighestBallot(l.promises).val)
+                    else PromiseWithHighestBallot(promises).val)
         && l'.promises == {}
         && l'.accepts == {}
     else 

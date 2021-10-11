@@ -124,48 +124,65 @@ predicate LeaderIdxDecidedV(c:Constants, ds:DistrSys, idx:int, v:Value, b:Ballot
 
 
 /* Invariants for establishing Agreement */
-predicate Agreement_Inv(c:Constants, ds:DistrSys, b:Ballot) 
+predicate Agreement_Inv(c:Constants, ds:DistrSys) 
 {
     && c.WF()
     && ds.WF(c)
     && Agreement(c, ds)
+    && LdrBallotNotBottom(c, ds)
+}
+
+
+predicate LdrBallotNotBottom(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    && (forall l | l in ds.leaders :: l.ballot != Bottom)
+    // && (forall m | m in ds.network.sentPackets ::
 }
 
 
 /* Init ==> Agreement_Inv */
-lemma InitImpliesAgreementInv(c:Constants, ds:DistrSys, b:Ballot) 
+lemma InitImpliesAgreementInv(c:Constants, ds:DistrSys) 
     requires Init(c, ds)
-    ensures Agreement_Inv(c, ds, b)
+    ensures Agreement_Inv(c, ds)
 {}
 
 
 /* Agreement_Inv && Next ==> Agreement_Inv' */
-lemma NextPreservesAgreementInv(c:Constants, b:Ballot, ds:DistrSys, ds':DistrSys) 
-    requires Agreement_Inv(c, ds, b)
+lemma NextPreservesAgreementInv(c:Constants, ds:DistrSys, ds':DistrSys) 
+    requires Agreement_Inv(c, ds)
     requires Next(c, ds, ds')
-    ensures Agreement_Inv(c, ds', b)
+    ensures Agreement_Inv(c, ds')
 {
     if exists v, b, i :: c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b) {
         // If someone has decided in ds
         // TODO
         assume false;
-        assert Agreement(c, ds');
+        assert Agreement_Inv(c, ds');
     } else {
         // If no one has decided in ds
-        var src, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', src, recvIos, sendIos);
-        if src.agt == Acc {
-            assert forall l | l in ds'.leaders :: !l.state.Decided?;
-            assert forall l | l in ds'.leaders :: !l.state.Decided?;
-            assert forall v, b, i | c.ValidLdrIdx(i) :: !LeaderIdxDecidedV(c, ds', i, v, b);
-            assert Agreement(c, ds');
-        } else {
-            // TODO
-            assume false;
-            assert Agreement(c, ds');
-        }
+        NextPreservesAgreementInv_Case_NoDecision(c, ds, ds');
     }
 }
 
+
+lemma NextPreservesAgreementInv_Case_NoDecision(c:Constants, ds:DistrSys, ds':DistrSys) 
+    requires Agreement_Inv(c, ds)
+    requires Next(c, ds, ds')
+    requires forall v, b, i | c.ValidLdrIdx(i) :: !LeaderIdxDecidedV(c, ds, i, v, b)
+    ensures Agreement_Inv(c, ds')
+{
+    var src, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', src, recvIos, sendIos);
+    forall l | l in ds.leaders 
+    ensures !l.state.Decided? {
+        if l.state.Decided? {
+            var v, b, i := l.val, l.ballot, l.consts.id.idx;
+            assert b != Bottom;
+            assert LeaderIdxDecidedV(c, ds, i, v, b);
+            assert false;
+        }
+    }
+}
 
 
 

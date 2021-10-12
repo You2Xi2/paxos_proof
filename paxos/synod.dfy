@@ -88,22 +88,22 @@ predicate Next(c:Constants, s:DistrSys, s':DistrSys) {
     && c.WF()
     && s.WF(c)
     && s'.WF(c)
-    && exists src, recvIos, sendIos :: PaxosNextOneAgent(c, s, s', src, recvIos, sendIos)
+    && exists actor, recvIos, sendIos :: PaxosNextOneAgent(c, s, s', actor, recvIos, sendIos)
 }
 
 
-predicate PaxosNextOneAgent(c:Constants, s:DistrSys, s':DistrSys, src:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+predicate PaxosNextOneAgent(c:Constants, s:DistrSys, s':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
     requires c.WF() && s.WF(c) && s'.WF(c)
 {
-    && ValidSrc(c, src)
-    && PaxosNextOneAgent_Agent(c, s, s', src, recvIos, sendIos)
-    && s.network.nextStep == IoStep(src, recvIos, sendIos)
+    && ValidActor(c, actor)
+    && PaxosNextOneAgent_Agent(c, s, s', actor, recvIos, sendIos)
+    && s.network.nextStep == IoStep(actor, recvIos, sendIos)
     && EnvironmentNext(s.network, s'.network)
 }
 
 predicate PaxosNextOneAgent_Agent(c:Constants, s:DistrSys, s':DistrSys, src:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
     requires c.WF() && s.WF(c) && s'.WF(c)
-    requires ValidSrc(c, src)
+    requires ValidActor(c, src)
 {
     match src.agt {
         case Ldr() => 
@@ -119,12 +119,12 @@ predicate PaxosNextOneAgent_Agent(c:Constants, s:DistrSys, s':DistrSys, src:Id, 
     }
 }
 
-predicate ValidSrc(c:Constants, src:Id) 
+predicate ValidActor(c:Constants, actor:Id) 
     requires c.WF()
 {
-     match src.agt {
-        case Ldr => c.ValidLdrIdx(src.idx)
-        case Acc => c.ValidAccIdx(src.idx)
+     match actor.agt {
+        case Ldr => c.ValidLdrIdx(actor.idx)
+        case Acc => c.ValidAccIdx(actor.idx)
     }
 }
 

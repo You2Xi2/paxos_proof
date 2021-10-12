@@ -130,6 +130,7 @@ predicate Agreement_Inv(c:Constants, ds:DistrSys)
     && ds.WF(c)
     && Agreement(c, ds)
     && LdrBallotNotBottom(c, ds)
+    && FutureBallotsDecisionsProperty(c, ds)
 }
 
 
@@ -156,17 +157,39 @@ lemma NextPreservesAgreementInv(c:Constants, ds:DistrSys, ds':DistrSys)
 {
     if exists v, b, i :: c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b) {
         // If someone has decided in ds
-        // TODO
-        assume false;
-        assert Agreement_Inv(c, ds');
+        NextPreservesAgreementInv_Case_ExistingDecision(c, ds, ds');
     } else {
         // If no one has decided in ds
-        NextPreservesAgreementInv_Case_NoDecision(c, ds, ds');
+        NextPreservesAgreementInv_Case_NoExistingDecision(c, ds, ds');
     }
 }
 
+lemma NextPreservesAgreementInv_Case_ExistingDecision(c:Constants, ds:DistrSys, ds':DistrSys) 
+    requires Agreement_Inv(c, ds)
+    requires Next(c, ds, ds')
+    requires exists v, b, i :: c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b)
+    ensures Agreement_Inv(c, ds')
+{
+    var v, b, i :| c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b);
+    var actor, recvIos:seq<Packet>, sendIos:seq<Packet> :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
+    if actor.agt.Ldr? {
+        var l, l' := ds.leaders[actor.idx], ds'.leaders[actor.idx];
+        if l.state == P2b && recvIos[0].msg.Accept? {
+            var src, msg := recvIos[0].src, recvIos[0].msg;
+            if msg.bal == l.ballot && src !in l.accepts && |l.accepts| == 2*l.consts.f {
+                var b', v' := l.ballot, l.val;
+                if v' != v {
+                    assert LeaderIdxDecidedV(c, ds', actor.idx, v', b'); 
+                    lemma_FutureBallotsDecisionsProperty(c, ds, ds');
+                    assert LeaderIdxDecidedV(c, ds', i, v, b); 
+                    assert false;
+                }
+            }
+        } 
+    }
+}
 
-lemma NextPreservesAgreementInv_Case_NoDecision(c:Constants, ds:DistrSys, ds':DistrSys) 
+lemma NextPreservesAgreementInv_Case_NoExistingDecision(c:Constants, ds:DistrSys, ds':DistrSys) 
     requires Agreement_Inv(c, ds)
     requires Next(c, ds, ds')
     requires forall v, b, i | c.ValidLdrIdx(i) :: !LeaderIdxDecidedV(c, ds, i, v, b)
@@ -185,17 +208,15 @@ lemma NextPreservesAgreementInv_Case_NoDecision(c:Constants, ds:DistrSys, ds':Di
 }
 
 
-
-
+///////////////////////          Agreement Sub-Lemma         /////////////////////////////
 
 /* Assumption that if v is decided with ballot b, then all values decided with ballots
 * b' >= b must be of v */
-predicate FutureProposalsInv(c:Constants, ds:DistrSys, i:int, v:Value, b:Ballot)
+predicate FutureBallotsDecisionsProperty(c:Constants, ds:DistrSys)
     requires c.WF() && ds.WF(c)
-    requires c.ValidLdrIdx(i) 
 {
-    LeaderIdxDecidedV(c, ds, i, v, b) 
-    ==> 
+    forall v, b, i | c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b) 
+    :: 
     (forall v', b', i' | 
         && c.ValidLdrIdx(i') 
         && BalLtEq(b, b') 
@@ -204,12 +225,11 @@ predicate FutureProposalsInv(c:Constants, ds:DistrSys, i:int, v:Value, b:Ballot)
 }
 
 
-lemma lemma_FutureProposalsInv(c:Constants, v:Value, i:int, b:Ballot, ds:DistrSys, ds':DistrSys)
+lemma lemma_FutureBallotsDecisionsProperty(c:Constants, ds:DistrSys, ds':DistrSys)
     requires c.WF() && ds.WF(c)
-    requires c.ValidLdrIdx(i) 
-    requires FutureProposalsInv(c, ds, i, v, b)
+    requires FutureBallotsDecisionsProperty(c, ds)
     requires Next(c, ds, ds')
-    ensures FutureProposalsInv(c, ds', i, v, b);
+    ensures FutureBallotsDecisionsProperty(c, ds');
 {
     assume false;
 }

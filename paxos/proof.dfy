@@ -58,10 +58,10 @@ predicate Validity_Inv_AllMessegesContainV(c:Constants, ds:DistrSys, v:Value)
 predicate MessageContainsV(m: Message, v:Value) {
     match m {
         case Prepare(bal) => true
-        case Promise(bal, val, valbal) => val != v ==> val == Nil
+        case Promise(bal, vb) => vb.v != v ==> vb.v == Nil
         case Propose(bal, val) => val == v
         case Accept(bal) =>  true
-        case Preempt(bal, val) => val != v ==> val == Nil
+        case Preempt(bal) => true
     }
 }
 
@@ -69,7 +69,7 @@ predicate Validity_Inv_AllAccAcceptsV(c:Constants, ds:DistrSys, v:Value)
     requires c.WF()
     requires ds.WF(c)
 {
-    AllProcessesInitV(c, ds, v) ==> forall i | c.ValidAccIdx(i) :: ds.acceptors[i].accepted != v ==> ds.acceptors[i].accepted == Nil 
+    AllProcessesInitV(c, ds, v) ==> forall i | c.ValidAccIdx(i) :: ds.acceptors[i].accepted.v != v ==> ds.acceptors[i].accepted.v == Nil 
 }
 
 predicate Validity_Inv_AllLdrProposeV(c:Constants, ds:DistrSys, v:Value)
@@ -80,7 +80,7 @@ predicate Validity_Inv_AllLdrProposeV(c:Constants, ds:DistrSys, v:Value)
     && (forall i | c.ValidLdrIdx(i) :: ds.leaders[i].val == v)
     && (forall i | c.ValidLdrIdx(i) :: 
             forall p | p in ds.leaders[i].promises 
-            :: p.val != Nil ==> p.val == v)
+            :: p.vb.v != Nil ==> p.vb.v == v)
 }
 
 

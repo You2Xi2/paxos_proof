@@ -216,22 +216,24 @@ predicate Agreement_Inv_Lemma(c:Constants, ds:DistrSys)
 {
     && c.WF()
     && ds.WF(c)
-    && FutureBallotsDecisionsProperty(c, ds)
+    && LargerBallotsDecisionsProperty(c, ds)
 }
 
 
 /* Assumption that if v is decided with ballot b, then all values decided with ballots
 * b' >= b must be of v */
-predicate FutureBallotsDecisionsProperty(c:Constants, ds:DistrSys)
+predicate LargerBallotsDecisionsProperty(c:Constants, ds:DistrSys)
     requires c.WF() && ds.WF(c)
 {
     forall v, b, i | c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b) 
-    :: 
-    (forall v', b', i' | 
-        && c.ValidLdrIdx(i') 
-        && BalLtEq(b, b') 
-        && LeaderIdxDecidedV(c, ds, i', v', b') 
-        :: v' == v)
+    :: LargerBallotsDecideV(c, ds, v, b)
+}
+
+predicate LargerBallotsDecideV(c:Constants, ds:DistrSys, v:Value, b:Ballot)
+    requires c.WF() && ds.WF(c)
+{
+    forall v', b', i' | c.ValidLdrIdx(i') && BalLtEq(b, b') && LeaderIdxDecidedV(c, ds, i', v', b') 
+    :: v' == v
 }
 
 

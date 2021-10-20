@@ -101,21 +101,21 @@ predicate PaxosNextOneAgent(c:Constants, s:DistrSys, s':DistrSys, actor:Id, recv
     && EnvironmentNext(s.network, s'.network)
 }
 
-predicate PaxosNextOneAgent_Agent(c:Constants, s:DistrSys, s':DistrSys, src:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
+predicate PaxosNextOneAgent_Agent(c:Constants, s:DistrSys, s':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
     requires c.WF() && s.WF(c) && s'.WF(c)
-    requires ValidActor(c, src)
+    requires ValidActor(c, actor)
 {
-    match src.agt {
-        case Ldr() => 
+    match actor.agt {
+        case Ldr => 
             && s'.acceptors == s.acceptors
             && |s'.leaders| == |s.leaders|
-            && s'.leaders == s.leaders[src.idx := s'.leaders[src.idx]]
-            && LeaderNext(s.leaders[src.idx], s'.leaders[src.idx], recvIos, sendIos)
-        case Acc() => 
+            && s'.leaders == s.leaders[actor.idx := s'.leaders[actor.idx]]
+            && LeaderNext(s.leaders[actor.idx], s'.leaders[actor.idx], recvIos, sendIos)
+        case Acc => 
             && s'.leaders == s.leaders
             && |s'.acceptors| == |s.acceptors|
-            && s'.acceptors == s.acceptors[src.idx := s'.acceptors[src.idx]]
-            && AcceptorNext(s.acceptors[src.idx], s'.acceptors[src.idx], recvIos, sendIos)
+            && s'.acceptors == s.acceptors[actor.idx := s'.acceptors[actor.idx]]
+            && AcceptorNext(s.acceptors[actor.idx], s'.acceptors[actor.idx], recvIos, sendIos)
     }
 }
 
@@ -145,6 +145,27 @@ predicate LeaderInPhase2(c:Constants, idx:int, ds:DistrSys)
     requires c.ValidLdrIdx(idx)
 {
     ds.leaders[idx].state == P2a || ds.leaders[idx].state == P2b
+}
+
+predicate LeaderDecided(c:Constants, idx:int, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrIdx(idx)
+{
+    ds.leaders[idx].state == Decided
+}
+
+predicate LeaderHasBallotB(c:Constants, idx:int, ds:DistrSys, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrIdx(idx)
+{
+    ds.leaders[idx].ballot == b
+}
+
+predicate LeaderHasValueV(c:Constants, idx:int, ds:DistrSys, v:Value) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrIdx(idx)
+{
+    ds.leaders[idx].val == v
 }
 
 }

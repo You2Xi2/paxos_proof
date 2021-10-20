@@ -196,6 +196,7 @@ lemma NextPreservesAgreementInv_Case_NoExistingDecision(c:Constants, ds:DistrSys
     requires forall v, b, i | c.ValidLdrIdx(i) :: !LeaderIdxDecidedV(c, ds, i, v, b)
     ensures Agreement_Inv(c, ds')
 {
+    NextPreservesAgreementInvLemma(c, ds, ds');
     var src, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', src, recvIos, sendIos);
     forall l | l in ds.leaders 
     ensures !l.state.Decided? {
@@ -216,19 +217,19 @@ predicate Agreement_Inv_Lemma(c:Constants, ds:DistrSys)
 {
     && c.WF()
     && ds.WF(c)
-    && LargerBallotsDecisionsProperty(c, ds)
+    && (forall v, b, i | c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b)
+        ::  && LargerBallotsDecideV(c, ds, v, b)
+            && LargerBallotPhase2LeadersV(c, ds, v, b)
+            // && (exists q :: QuorumOfAcceptors(c, q) && QuorumOfAcceptorsAcceptedBV(c, ds, q, v, b))
+            && LargerBallotAcceptors(c, ds, v, b)
+            && LargerBallotPromiseMsgs(c, ds, v, b)
+            && LargerBallotProposalMsgs(c, ds, v, b)
+    )
 }
 
 
-/* Assumption that if v is decided with ballot b, then all values decided with ballots
+/* If v is decided with ballot b, then all values decided with ballots
 * b' >= b must be of v */
-predicate LargerBallotsDecisionsProperty(c:Constants, ds:DistrSys)
-    requires c.WF() && ds.WF(c)
-{
-    forall v, b, i | c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b) 
-    :: LargerBallotsDecideV(c, ds, v, b)
-}
-
 predicate LargerBallotsDecideV(c:Constants, ds:DistrSys, v:Value, b:Ballot)
     requires c.WF() && ds.WF(c)
 {
@@ -236,16 +237,128 @@ predicate LargerBallotsDecideV(c:Constants, ds:DistrSys, v:Value, b:Ballot)
     :: v' == v
 }
 
+/* If v is decided with ballot b, then all phase 2 leaders with ballots
+* b' >= b must be of v */
+predicate LargerBallotPhase2LeadersV(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    forall b', i' | 
+        && c.ValidLdrIdx(i') && BalLtEq(b, b') 
+        && LeaderInPhase2(c, i', ds) && LeaderHasBallotB(c, i', ds, b')
+    :: LeaderHasValueV(c, i', ds, v)
+}
 
+/* If v is decided with ballot b, then there is a quorum q of acceptors such that all in q
+* accepted b' >= b with value v */
+predicate QuorumOfAcceptorsAcceptedBV(c:Constants, ds:DistrSys, q:set<int>, v:Value, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+    requires QuorumOfAcceptors(c, q)
+{
+    forall idx | idx in q ::
+        && ds.acceptors[idx].accepted.v == v
+        && BalLtEq(b, ds.acceptors[idx].accepted.b)
+}
+
+/* If v is decided with ballot b, then for any acceptor that accepted a ballot b'>=b, 
+* the accepted value is v */
+predicate LargerBallotAcceptors(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    forall idx | c.ValidAccIdx(idx) && BalLtEq(b, ds.acceptors[idx].accepted.b)
+    :: ds.acceptors[idx].accepted.v == v
+}
+
+/* If v is decided with ballot b, then for any Promise msgs with valbal ballot b'>=b, 
+* the valbal value is v */
+predicate LargerBallotPromiseMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    forall p | p in ds.network.sentPackets && p.msg.Promise? && BalLtEq(b, p.msg.vb.b)
+    :: p.msg.vb.v == v
+}
+
+/* If v is decided with ballot b, then for any Proposal msgs with ballot b'>=b, 
+* the value is v */
+predicate LargerBallotProposalMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    forall p | p in ds.network.sentPackets && p.msg.Propose? && BalLtEq(b, p.msg.bal)
+    :: p.msg.val == v
+}
+
+
+/* Main theorem for Agreement_Inv_Lemma */
 lemma NextPreservesAgreementInvLemma(c:Constants, ds:DistrSys, ds':DistrSys) 
     requires Agreement_Inv_Lemma(c, ds)
     requires Next(c, ds, ds')
     ensures Agreement_Inv_Lemma(c, ds')
 {
-    assume false;
+    if exists v, b, i :: c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b) {
+        var v, b, i :| c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b);
+        
+        Lemma_LargerBallotAcceptors_1(c, ds, ds', i, v, b);
+        assert LargerBallotAcceptors(c, ds', v, b);
+
+        Lemma_LargerBallotsDecideV_1(c, ds, ds', i, v, b);
+        assert LargerBallotsDecideV(c, ds', v, b);
+
+        assert LargerBallotPhase2LeadersV(c, ds', v, b);
+        // assert (exists q :: QuorumOfAcceptors(c, q) && QuorumOfAcceptorsAcceptedBV(c, ds, q, v, b))
+        assert LargerBallotAcceptors(c, ds', v, b);
+        assert LargerBallotPromiseMsgs(c, ds', v, b);
+        assert LargerBallotProposalMsgs(c, ds', v, b);
+
+        assert Agreement_Inv_Lemma(c, ds');
+    } else {
+        assume false;
+    }
 }
 
 
+lemma Lemma_LargerBallotAcceptors_1(c:Constants, ds:DistrSys, ds':DistrSys,i:int, v:Value, b:Ballot) 
+    requires Agreement_Inv_Lemma(c, ds)
+    requires Next(c, ds, ds')
+    requires c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b)
+    ensures LargerBallotAcceptors(c, ds', v, b)
+{}
+
+lemma Lemma_LargerBallotsDecideV_1(c:Constants, ds:DistrSys, ds':DistrSys,i:int, v:Value, b:Ballot) 
+    requires Agreement_Inv_Lemma(c, ds)
+    requires Next(c, ds, ds')
+    requires c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b)
+    ensures LargerBallotsDecideV(c, ds', v, b)
+{
+    var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
+    if actor.agt == Ldr {
+        var l, l' := ds.leaders[actor.idx], ds'.leaders[actor.idx];
+        if l.state == P2b {
+            // TODO
+            if recvIos[0].msg.Accept? {
+                assert LeaderProcessAccept(l, l', recvIos[0], sendIos);
+                var src, msg := recvIos[0].src, recvIos[0].msg;
+                if LeaderProcessValidAccept(l, l', src, msg, sendIos) {
+                    assert LargerBallotsDecideV(c, ds', v, b);
+                } else {
+                    assert LargerBallotsDecideV(c, ds', v, b);
+                }
+            }
+            assert LargerBallotsDecideV(c, ds', v, b);
+        } else {
+            // TODO
+            assume false;
+            assert LargerBallotsDecideV(c, ds', v, b);
+        }
+        assert LargerBallotsDecideV(c, ds', v, b);
+    } else {
+        forall v', b', i' | c.ValidLdrIdx(i') && BalLtEq(b, b') && LeaderIdxDecidedV(c, ds', i', v', b') 
+        ensures v' == v {
+            if v != v' {
+                assert LeaderIdxDecidedV(c, ds, i', v', b');
+                assert false;
+            }
+        }
+    }
+}
 
 
 

@@ -183,7 +183,12 @@ lemma NextPreservesAgreementInv_Case_ExistingDecision(c:Constants, ds:DistrSys, 
                 if v' != v {
                     assert LeaderIdxDecidedV(c, ds', actor.idx, v', b'); 
                     assert LeaderIdxDecidedV(c, ds', i, v, b); 
-                    assert false;
+                    if BalLtEq(b, b'){
+                        assert false;
+                    } else {
+                        assert BalLtEq(b', b);
+                        assert false;
+                    }
                 }
             }
         } 
@@ -233,8 +238,10 @@ predicate Agreement_Inv_Lemma(c:Constants, ds:DistrSys)
 predicate LargerBallotsDecideV(c:Constants, ds:DistrSys, v:Value, b:Ballot)
     requires c.WF() && ds.WF(c)
 {
-    forall v', b', i' | c.ValidLdrIdx(i') && BalLtEq(b, b') && LeaderIdxDecidedV(c, ds, i', v', b') 
-    :: v' == v
+    forall b', i' | 
+        && c.ValidLdrIdx(i') && BalLtEq(b, b') 
+        && LeaderHasDecided(c, i', ds) && LeaderHasBallotB(c, i', ds, b') 
+    :: LeaderHasValueV(c, i', ds, v)
 }
 
 /* If v is decided with ballot b, then all phase 2 leaders with ballots
@@ -302,6 +309,7 @@ lemma NextPreservesAgreementInvLemma(c:Constants, ds:DistrSys, ds':DistrSys)
         Lemma_LargerBallotsDecideV_1(c, ds, ds', i, v, b);
         assert LargerBallotsDecideV(c, ds', v, b);
 
+        assume false;
         assert LargerBallotPhase2LeadersV(c, ds', v, b);
         // assert (exists q :: QuorumOfAcceptors(c, q) && QuorumOfAcceptorsAcceptedBV(c, ds, q, v, b))
         assert LargerBallotAcceptors(c, ds', v, b);
@@ -328,6 +336,8 @@ lemma Lemma_LargerBallotsDecideV_1(c:Constants, ds:DistrSys, ds':DistrSys,i:int,
     requires c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b)
     ensures LargerBallotsDecideV(c, ds', v, b)
 {
+    // TODO
+    assume false;
     var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
     if actor.agt == Ldr {
         var l, l' := ds.leaders[actor.idx], ds'.leaders[actor.idx];

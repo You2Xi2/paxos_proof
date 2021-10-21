@@ -147,7 +147,7 @@ predicate LeaderInPhase2(c:Constants, idx:int, ds:DistrSys)
     ds.leaders[idx].state == P2a || ds.leaders[idx].state == P2b
 }
 
-predicate LeaderDecided(c:Constants, idx:int, ds:DistrSys) 
+predicate LeaderHasDecided(c:Constants, idx:int, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(idx)
 {

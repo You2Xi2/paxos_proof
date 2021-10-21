@@ -309,7 +309,7 @@ lemma NextPreservesAgreementInvLemma(c:Constants, ds:DistrSys, ds':DistrSys)
         Lemma_LargerBallotsDecideV_1(c, ds, ds', i, v, b);
         assert LargerBallotsDecideV(c, ds', v, b);
 
-        assume false;
+        // assume false;
         assert LargerBallotPhase2LeadersV(c, ds', v, b);
         // assert (exists q :: QuorumOfAcceptors(c, q) && QuorumOfAcceptorsAcceptedBV(c, ds, q, v, b))
         assert LargerBallotAcceptors(c, ds', v, b);
@@ -335,40 +335,7 @@ lemma Lemma_LargerBallotsDecideV_1(c:Constants, ds:DistrSys, ds':DistrSys,i:int,
     requires Next(c, ds, ds')
     requires c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b)
     ensures LargerBallotsDecideV(c, ds', v, b)
-{
-    // TODO
-    assume false;
-    var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
-    if actor.agt == Ldr {
-        var l, l' := ds.leaders[actor.idx], ds'.leaders[actor.idx];
-        if l.state == P2b {
-            // TODO
-            if recvIos[0].msg.Accept? {
-                assert LeaderProcessAccept(l, l', recvIos[0], sendIos);
-                var src, msg := recvIos[0].src, recvIos[0].msg;
-                if LeaderProcessValidAccept(l, l', src, msg, sendIos) {
-                    assert LargerBallotsDecideV(c, ds', v, b);
-                } else {
-                    assert LargerBallotsDecideV(c, ds', v, b);
-                }
-            }
-            assert LargerBallotsDecideV(c, ds', v, b);
-        } else {
-            // TODO
-            assume false;
-            assert LargerBallotsDecideV(c, ds', v, b);
-        }
-        assert LargerBallotsDecideV(c, ds', v, b);
-    } else {
-        forall v', b', i' | c.ValidLdrIdx(i') && BalLtEq(b, b') && LeaderIdxDecidedV(c, ds', i', v', b') 
-        ensures v' == v {
-            if v != v' {
-                assert LeaderIdxDecidedV(c, ds, i', v', b');
-                assert false;
-            }
-        }
-    }
-}
+{}
 
 
 

@@ -69,7 +69,7 @@ predicate AcceptorPromise(a:Acceptor, a':Acceptor, recvIo:Packet, sendIos:seq<Pa
 predicate AcceptorAccept(a:Acceptor, a':Acceptor, recvIo:Packet, sendIos:seq<Packet>) 
     requires recvIo.msg.Propose?
 {
-    && a'.promised == recvIo.msg.bal
+    && a'.promised == recvIo.msg.bal 
     && a'.accepted == VB(recvIo.msg.val, recvIo.msg.bal)
     && |sendIos| == 1
     && sendIos[0].src == a.consts.id
@@ -103,7 +103,7 @@ datatype Leader = Leader(
     state:LeaderState,
     ballot:Ballot,
     val:Value,
-    promises:set<Promise>,
+    promises:set<Packet>,
     accepts:set<Id>
 )
 
@@ -173,17 +173,17 @@ predicate LeaderProcessPromise(l:Leader, l':Leader, pkt:Packet, sendIos:seq<Pack
 {
     var src, msg := pkt.src, pkt.msg;
     if msg.bal == l.ballot && !exists p :: p in l.promises && p.src == src then
-        LeaderProcessValidPromise(l, l', src, msg, sendIos)
+        LeaderProcessValidPromise(l, l', pkt, sendIos)
     else 
         // This is a stale promise
         LeaderStutter(l, l', sendIos)
 }
 
-predicate LeaderProcessValidPromise(l:Leader, l':Leader, src:Id, msg:Message, sendIos:seq<Packet>) 
-    requires msg.Promise?
+predicate LeaderProcessValidPromise(l:Leader, l':Leader, pkt:Packet, sendIos:seq<Packet>) 
+    requires pkt.msg.Promise?
     requires l.state == P1b
-    requires msg.bal == l.ballot
-    requires !exists p :: p in l.promises && p.src == src
+    requires pkt.msg.bal == l.ballot
+    requires !exists p :: p in l.promises && p.src == pkt.src
 {
     // Bug 6: The leader is supposed to propose the value accepted with the highest prior 
     // ballot from its quorum of Promise messages. However, in this case, I just pick the 
@@ -193,20 +193,20 @@ predicate LeaderProcessValidPromise(l:Leader, l':Leader, src:Id, msg:Message, se
     && sendIos == []    // Bug 2: left out this line, so sendIos was unspecified
     && if |l.promises| == 2*l.consts.f then 
         // Go to phase 2a
-        var promises := l.promises + {PromFromPromiseMessage(src, msg)};
+        var promises := l.promises + {pkt};
         && l'.state == P2a
         && l'.ballot == l.ballot
         // && l'.val == (if msg.val == Nil then l.val else msg.val)  // Bug 6
-        && l'.val == (if PromiseWithHighestBallot(promises).vb.v == Nil 
+        && l'.val == (if PromiseWithHighestBallot(promises).v == Nil 
                     then l.val 
-                    else PromiseWithHighestBallot(promises).vb.v)
+                    else PromiseWithHighestBallot(promises).v)
         && l'.promises == {}
         && l'.accepts == {}
     else 
         && l'.state == l.state
         && l'.ballot == l.ballot
         && l'.val == l.val
-        && l'.promises == l.promises + {PromFromPromiseMessage(src, msg)}
+        && l'.promises == l.promises + {pkt}
         && l'.accepts == l.accepts
 }
 
@@ -301,17 +301,18 @@ predicate LeaderProcessValidAccept(l:Leader, l':Leader, src:Id, msg:Message, sen
 *****************************************************************************************/
 
 
-function {:opaque} PromFromPromiseMessage(src:Id, msg:Message) : (p:Promise)
-    requires msg.Promise?
-    ensures p.src == src
-    ensures p.vb == msg.vb
-{
-    Pro(src, msg.vb)
-}
+// function {:opaque} PromFromPromiseMessage(src:Id, msg:Message) : (p:Promise)
+//     requires msg.Promise?
+//     ensures p.src == src
+//     ensures p.vb == msg.vb
+// {
+//     Pro(src, msg.vb)
+// }
 
 
-function PromiseWithHighestBallot(pset:set<Promise>) : (p:Promise) 
+function PromiseWithHighestBallot(pset:set<Packet>) : (vb:ValBal) 
     requires |pset| > 0
-    ensures p in pset
-    ensures forall p' | p' in pset :: BalLtEq(p'.vb.b, p.vb.b)
+    // requires forall p | p in pset :: p.msg.Promise?
+    ensures exists p :: p in pset && p.msg.Promise? && p.msg.vb == vb
+    ensures forall p' | p' in pset && p'.msg.Promise? :: BalLtEq(p'.msg.vb.b, vb.b)
 }

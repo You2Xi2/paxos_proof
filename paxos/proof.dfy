@@ -79,8 +79,8 @@ predicate Validity_Inv_AllLdrProposeV(c:Constants, ds:DistrSys, v:Value)
     AllProcessesInitV(c, ds, v) ==> 
     && (forall i | c.ValidLdrIdx(i) :: ds.leaders[i].val == v)
     && (forall i | c.ValidLdrIdx(i) :: 
-            forall p | p in ds.leaders[i].promises 
-            :: p.vb.v != Nil ==> p.vb.v == v)
+            forall p | p in ds.leaders[i].promises  && p.msg.Promise?
+            :: p.msg.vb.v != Nil ==> p.msg.vb.v == v)
 }
 
 
@@ -309,7 +309,7 @@ lemma NextPreservesAgreementInvLemma(c:Constants, ds:DistrSys, ds':DistrSys)
         Lemma_LargerBallotsDecideV_1(c, ds, ds', i, v, b);
         assert LargerBallotsDecideV(c, ds', v, b);
 
-        // assume false;
+        assume false;
         assert LargerBallotPhase2LeadersV(c, ds', v, b);
         // assert (exists q :: QuorumOfAcceptors(c, q) && QuorumOfAcceptorsAcceptedBV(c, ds, q, v, b))
         assert LargerBallotAcceptors(c, ds', v, b);

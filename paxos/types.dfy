@@ -16,8 +16,6 @@ datatype Message = Prepare(bal:Ballot)
 
 datatype Packet = Packet(src:Id, dst:Id, msg:Message)
 
-datatype Promise = Pro(src:Id, vb:ValBal)
-
 /* True iff b1 < b2 */
 predicate BalLt(b1:Ballot, b2:Ballot) {
     match b1 {

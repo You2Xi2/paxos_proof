@@ -60,6 +60,7 @@ datatype DistrSys = DistrSys(
         && |acceptors| == |c.acc_ids|
         && (forall i | c.ValidLdrIdx(i) :: leaders[i].consts.id == c.ldr_ids[i])
         && (forall i | c.ValidLdrIdx(i) :: leaders[i].consts.initval == c.ldr_vals[i])
+        && (forall i | c.ValidLdrIdx(i) :: leaders[i].consts.f == c.f)
         && (forall i | c.ValidAccIdx(i) :: acceptors[i].consts.id == c.acc_ids[i])
     }
 }

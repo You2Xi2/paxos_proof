@@ -239,7 +239,7 @@ predicate AgreementInvProperties_Decided(c:Constants, ds:DistrSys, v:Value, b:Ba
     requires c.WF() && ds.WF(c)
 {
     && v != Nil
-    // && LargerBallotsPromiseQrms(c, ds, v, b)
+    && LargerBallotsPromiseQrms(c, ds, v, b)
     && LargerBallotPhase2LeadersV(c, ds, v, b)
     && LargerBallotAcceptors(c, ds, v, b)
     && LargerBallotPromiseMsgs(c, ds, v, b)
@@ -352,32 +352,61 @@ lemma NextPreservesAgreementInvLemma_1(c:Constants, ds:DistrSys, ds':DistrSys, i
     requires Next(c, ds, ds')
     requires c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b);
     ensures Agreement_Inv_Lemma(c, ds')
-{
-    // assert v != Nil;
-    // Lemma_LargerBallotAcceptors_1(c, ds, ds', i, v, b);
-    // Lemma_LargerBallotsDecideV_1(c, ds, ds', i, v, b);
-    // assume LargerBallotsPromiseQrms(c, ds', v, b);  // TODO: Assume this for now
-    // Lemma_LargerBallotPhase2LeadersV_1(c, ds, ds', i, v, b);
-    // assert AgreementInvProperties_Decided(c, ds', v, b);
-    
+{   
     forall v', b', i' | c.ValidLdrIdx(i') && LeaderIdxDecidedV(c, ds', i', v', b')
     ensures && LargerBallotsDecideV(c, ds', v', b')
             && AgreementInvProperties_Decided(c, ds', v', b');
     {
         if BalLtEq(b, b') {
-            assume v' == v;
-            assert v' != Nil;
+            assert v' == v;
 
-            assert LargerBallotsDecideV(c, ds', v', b');
+            forall bx | BalLtEq(b', bx) 
+            ensures forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds', qrm, bx) 
+                    :: exists p :: p in qrm && BalLtEq(b', p.msg.vb.b) 
+            {
+                forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds', qrm, bx) 
+                ensures exists p :: p in qrm && BalLtEq(b', p.msg.vb.b) 
+                {
+                    assert exists p :: p in qrm && BalLtEq(b', p.msg.vb.b);
+                }
+            }
+            assert LargerBallotsPromiseQrms(c, ds', v', b');
 
-
-            // assert LargerBallotsPromiseQrms(c, ds', v', b');
-            assert LargerBallotPhase2LeadersV(c, ds', v', b');
-            assert LargerBallotAcceptors(c, ds', v', b');
-            assert LargerBallotPromiseMsgs(c, ds', v', b');
-            assert LargerBallotProposalMsgs(c, ds', v', b');
-            assert AgreementInvProperties_Decided(c, ds', v', b');
+            forall bx, ix | 
+                && c.ValidLdrIdx(ix) && BalLtEq(b, bx) 
+                && LeaderInPhase2(c, ix, ds') && LeaderHasBallotB(c, ix, ds', bx)
+            ensures LeaderHasValueV(c, ix, ds', v)
+            {
+                if !LeaderInPhase2(c, ix, ds) {
+                    var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
+                    if actor.agt == Ldr {
+                        var l, l' := ds.leaders[actor.idx], ds'.leaders[actor.idx];
+                        if l.state == P1b && recvIos[0].msg.Promise? {
+                            var src, msg := recvIos[0].src, recvIos[0].msg;
+                            if msg.bal == l.ballot && !exists p :: p in l.promises && p.src == src {
+                                if |l.promises| == 2*l.consts.f{
+                                    var qrm := l.promises + {recvIos[0]};
+                                    assert QuorumOfPromiseMsgs(c, ds, qrm, l.ballot);
+                                    assert exists p :: p in qrm && BalLtEq(b, p.msg.vb.b);
+                                }
+                            }
+                        } 
+                    }
+                }
+            }
+            assert AgreementInvProperties_Decided(c, ds', v', b');  // Inv
+            
+            forall bx, ix | 
+                && c.ValidLdrIdx(ix) && BalLtEq(b', bx) 
+                && LeaderHasDecided(c, ix, ds') && LeaderHasBallotB(c, ix, ds', bx) 
+            ensures LeaderHasValueV(c, ix, ds', v)
+            {
+                // TODO: This one is def true, but fragile. Dafny sees it sometimes, but sometimes not.
+                assert LargerBallotsPromiseQrms(c, ds, v, b);
+            }
+            assert LargerBallotsDecideV(c, ds', v', b');    // Safety
         } else {
+            // TODO
             assume false;
         }
     }
@@ -401,32 +430,32 @@ lemma Lemma_LargerBallotsDecideV_1(c:Constants, ds:DistrSys, ds':DistrSys,i:int,
     ensures LargerBallotsDecideV(c, ds', v, b)
 {}
 
-lemma Lemma_LargerBallotPhase2LeadersV_1(c:Constants, ds:DistrSys, ds':DistrSys,i:int, v:Value, b:Ballot) 
-    requires Agreement_Inv_Lemma(c, ds)
-    requires Next(c, ds, ds')
-    requires c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b)
-    ensures LargerBallotPhase2LeadersV(c, ds', v, b)
-{
-    var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
-    if actor.agt == Ldr {
-        var l, l' := ds.leaders[actor.idx], ds'.leaders[actor.idx];
-        if l.state == P1b && BalLtEq(b, l.ballot) {
-            var pkt := recvIos[0];
-            if pkt.msg.Promise? {
-                var src, msg := pkt.src, pkt.msg;
-                if  && msg.bal == l.ballot 
-                    && (!exists p :: p in l.promises && p.src == src) 
-                    && |l.promises| == 2*l.consts.f 
-                {
-                    var qrm := l.promises + {pkt};
-                    assert QuorumOfPromiseMsgs(c, ds, qrm, l.ballot);
-                    assert PromiseWithHighestBallot(qrm).v == v;
-                    assert LargerBallotPhase2LeadersV(c, ds', v, b);
-                }
-            }
-        }
-    }
-}
+// lemma Lemma_LargerBallotPhase2LeadersV_1(c:Constants, ds:DistrSys, ds':DistrSys,i:int, v:Value, b:Ballot) 
+//     requires Agreement_Inv_Lemma(c, ds)
+//     requires Next(c, ds, ds')
+//     requires c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b)
+//     ensures LargerBallotPhase2LeadersV(c, ds', v, b)
+// {
+//     var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
+//     if actor.agt == Ldr {
+//         var l, l' := ds.leaders[actor.idx], ds'.leaders[actor.idx];
+//         if l.state == P1b && BalLtEq(b, l.ballot) {
+//             var pkt := recvIos[0];
+//             if pkt.msg.Promise? {
+//                 var src, msg := pkt.src, pkt.msg;
+//                 if  && msg.bal == l.ballot 
+//                     && (!exists p :: p in l.promises && p.src == src) 
+//                     && |l.promises| == 2*l.consts.f 
+//                 {
+//                     var qrm := l.promises + {pkt};
+//                     assert QuorumOfPromiseMsgs(c, ds, qrm, l.ballot);
+//                     assert PromiseWithHighestBallot(qrm).v == v;
+//                     assert LargerBallotPhase2LeadersV(c, ds', v, b);
+//                 }
+//             }
+//         }
+//     }
+// }
 
 
 

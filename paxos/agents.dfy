@@ -113,7 +113,8 @@ predicate LeaderInit(l:Leader, id:Id, accConf:seq<Id>, f:nat, initval:Value) {
     && l.state == P1a
     && l.ballot == Ballot(0, id.idx)
     && l.val == initval
-    && l.promises == {}   // Bug 8: This line was omitted
+    && l.promises == {}     // Bug 8: This line was omitted
+    && l.accepts == {}      // Bug 12: This line was omitted
 }
 
 /* Leader next state */

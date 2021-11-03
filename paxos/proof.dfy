@@ -222,22 +222,32 @@ predicate Agreement_Inv_Lemma(c:Constants, ds:DistrSys)
 {
     && c.WF()
     && ds.WF(c)
-    && LeaderPromisesSet(c, ds)
-    && (forall v, b, i | c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b)
-        ::  && v != Nil
-            && LargerBallotsDecideV(c, ds, v, b)
-            
-            && LargerBallotsPromiseQrms(c, ds, v, b)
-            && LargerBallotPhase2LeadersV(c, ds, v, b)
-            // && (exists q :: QuorumOfAcceptors(c, q) && QuorumOfAcceptorsAcceptedBV(c, ds, q, v, b))
-            && LargerBallotAcceptors(c, ds, v, b)
-            && LargerBallotPromiseMsgs(c, ds, v, b)
-            && LargerBallotProposalMsgs(c, ds, v, b)
-    )
+    && LeaderPromisesSetProperty(c, ds)
+    && Agreement_Safey(c, ds)
+    && (forall v, b, i | c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b) 
+        :: AgreementInvProperties_Decided(c, ds, v, b))
+}
+
+predicate Agreement_Safey(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall v, b, i | c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b)
+    :: LargerBallotsDecideV(c, ds, v, b)
+}
+
+predicate AgreementInvProperties_Decided(c:Constants, ds:DistrSys, v:Value, b:Ballot)
+    requires c.WF() && ds.WF(c)
+{
+    && v != Nil
+    // && LargerBallotsPromiseQrms(c, ds, v, b)
+    && LargerBallotPhase2LeadersV(c, ds, v, b)
+    && LargerBallotAcceptors(c, ds, v, b)
+    && LargerBallotPromiseMsgs(c, ds, v, b)
+    && LargerBallotProposalMsgs(c, ds, v, b)
 }
 
 
-predicate LeaderPromisesSet(c:Constants, ds:DistrSys) 
+predicate LeaderPromisesSetProperty(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
     forall i | c.ValidLdrIdx(i) :: (
@@ -328,32 +338,53 @@ lemma NextPreservesAgreementInvLemma(c:Constants, ds:DistrSys, ds':DistrSys)
     requires Next(c, ds, ds')
     ensures Agreement_Inv_Lemma(c, ds')
 {
-    assert LeaderPromisesSet(c, ds');
     if exists v, b, i :: c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b) {
         var v, b, i :| c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b);
-        assert v != Nil;
-        Lemma_LargerBallotAcceptors_1(c, ds, ds', i, v, b);
-        assert LargerBallotAcceptors(c, ds', v, b);     // Done
-        Lemma_LargerBallotsDecideV_1(c, ds, ds', i, v, b);
-        assert LargerBallotsDecideV(c, ds', v, b);      // Done
-        assume LargerBallotsPromiseQrms(c, ds', v, b);  // TODO: Assume this for now
-        
-
-        Lemma_LargerBallotPhase2LeadersV_1(c, ds, ds', i, v, b);
-        assert LargerBallotPhase2LeadersV(c, ds', v, b);
-
-        // TODO
-        assume false;
-        // assert (exists q :: QuorumOfAcceptors(c, q) && QuorumOfAcceptorsAcceptedBV(c, ds, q, v, b));
-        assert LargerBallotAcceptors(c, ds', v, b);
-        assert LargerBallotPromiseMsgs(c, ds', v, b);
-        assert LargerBallotProposalMsgs(c, ds', v, b);
-
-        assert Agreement_Inv_Lemma(c, ds');
+        NextPreservesAgreementInvLemma_1(c, ds, ds', i, v, b);
     } else {
         assume false;
     }
 }
+
+
+lemma NextPreservesAgreementInvLemma_1(c:Constants, ds:DistrSys, ds':DistrSys, i:int, v:Value, b:Ballot) 
+    requires Agreement_Inv_Lemma(c, ds)
+    requires Next(c, ds, ds')
+    requires c.ValidLdrIdx(i) && LeaderIdxDecidedV(c, ds, i, v, b);
+    ensures Agreement_Inv_Lemma(c, ds')
+{
+    // assert v != Nil;
+    // Lemma_LargerBallotAcceptors_1(c, ds, ds', i, v, b);
+    // Lemma_LargerBallotsDecideV_1(c, ds, ds', i, v, b);
+    // assume LargerBallotsPromiseQrms(c, ds', v, b);  // TODO: Assume this for now
+    // Lemma_LargerBallotPhase2LeadersV_1(c, ds, ds', i, v, b);
+    // assert AgreementInvProperties_Decided(c, ds', v, b);
+    
+    forall v', b', i' | c.ValidLdrIdx(i') && LeaderIdxDecidedV(c, ds', i', v', b')
+    ensures && LargerBallotsDecideV(c, ds', v', b')
+            && AgreementInvProperties_Decided(c, ds', v', b');
+    {
+        if BalLtEq(b, b') {
+            assume v' == v;
+            assert v' != Nil;
+
+            assert LargerBallotsDecideV(c, ds', v', b');
+
+
+            // assert LargerBallotsPromiseQrms(c, ds', v', b');
+            assert LargerBallotPhase2LeadersV(c, ds', v', b');
+            assert LargerBallotAcceptors(c, ds', v', b');
+            assert LargerBallotPromiseMsgs(c, ds', v', b');
+            assert LargerBallotProposalMsgs(c, ds', v', b');
+            assert AgreementInvProperties_Decided(c, ds', v', b');
+        } else {
+            assume false;
+        }
+    }
+    assert Agreement_Inv_Lemma(c, ds');
+}
+
+
 
 
 lemma Lemma_LargerBallotAcceptors_1(c:Constants, ds:DistrSys, ds':DistrSys,i:int, v:Value, b:Ballot) 

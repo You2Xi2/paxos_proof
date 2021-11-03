@@ -151,32 +151,61 @@ predicate QuorumOfPromiseMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballo
     && (forall p | p in qrm :: p in ds.network.sentPackets)
 }
 
-predicate LeaderInPhase2(c:Constants, idx:int, ds:DistrSys) 
+predicate LeaderInPhase2(c:Constants, ds:DistrSys, idx:int) 
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(idx)
 {
     ds.leaders[idx].state == P2a || ds.leaders[idx].state == P2b
 }
 
-predicate LeaderHasDecided(c:Constants, idx:int, ds:DistrSys) 
+predicate LeaderHasDecided(c:Constants, ds:DistrSys, idx:int) 
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(idx)
 {
     ds.leaders[idx].state == Decided
 }
 
-predicate LeaderHasBallotB(c:Constants, idx:int, ds:DistrSys, b:Ballot) 
+predicate LeaderHasBallotB(c:Constants, ds:DistrSys, idx:int, b:Ballot) 
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(idx)
 {
     ds.leaders[idx].ballot == b
 }
 
-predicate LeaderHasValueV(c:Constants, idx:int, ds:DistrSys, v:Value) 
+predicate LeaderHasValueV(c:Constants, ds:DistrSys, idx:int, v:Value) 
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(idx)
 {
     ds.leaders[idx].val == v
+}
+
+predicate AcceptorHasValueV(c:Constants, ds:DistrSys, idx:int, v:Value) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidAccIdx(idx)
+{
+    ds.acceptors[idx].accepted.v == v
+}
+
+predicate TwoLeadersHaveSameV(c:Constants, ds:DistrSys, i1:int, i2:int) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrIdx(i1) && c.ValidLdrIdx(i2)
+{
+    LeaderHasValueV(c, ds, i1, ds.leaders[i2].val)
+}
+
+predicate LeaderIdxDecidedV(c:Constants, ds:DistrSys, idx:int, v:Value, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrIdx(idx)
+{
+    && LeaderHasDecided(c, ds, idx)
+    && LeaderHasValueV(c, ds, idx,v)
+    && LeaderHasBallotB(c, ds, idx, b)
+}
+
+predicate SomeLeaderHasDecided(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    exists i :: c.ValidLdrIdx(i) && LeaderHasDecided(c, ds, i)
 }
 
 }

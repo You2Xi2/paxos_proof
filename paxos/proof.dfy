@@ -323,8 +323,7 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
     var actor, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
     if actor.agt == Ldr {
         // If actor is a Leader
-        // TODO 
-        assume false;
+        // Surprise! This case is trivial!
         assert Agreement_Inv(c, ds');
     } else {
         // If actor is an Acceptor

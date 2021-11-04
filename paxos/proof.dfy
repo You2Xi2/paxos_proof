@@ -343,9 +343,17 @@ lemma NextPreservesAgreementInv(c:Constants, ds:DistrSys, ds':DistrSys)
             assert Agreement_Inv(c, ds');
         }
     } else {
-        // TODO
-        assume false;
-        assert Agreement_Inv(c, ds');
+        var actor, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
+        if actor.agt == Ldr {
+            // If actor is a Leader
+            // TODO 
+            assume false;
+            assert Agreement_Inv(c, ds');
+        } else {
+            // If actor is an Acceptor
+            // This case should be trivial
+            assert Agreement_Inv(c, ds');
+        }
     }
 }
 

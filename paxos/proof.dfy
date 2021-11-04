@@ -305,56 +305,76 @@ lemma NextPreservesAgreementInv(c:Constants, ds:DistrSys, ds':DistrSys)
     ensures Agreement_Inv(c, ds')
 {
     if SomeLeaderHasDecided(c, ds) {
-        var i1 :| c.ValidLdrIdx(i1) && LeaderHasDecided(c, ds, i1);
-        var b1, v1 := ds.leaders[i1].ballot, ds.leaders[i1].val;
-        var actor, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
-        if actor.agt == Ldr {
-            // If actor is a Leader
-            // TODO 
-            assume false;
-            assert Agreement_Inv(c, ds');
-        } else {
-            // If actor is an Acceptor
-            assert Agreement(c, ds');
-            assert LdrBallotNotBottom(c, ds');
-            assert LdrAcceptsSetUnique(c, ds');
-            assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');
-            assert LdrPromisesSetUnique(c, ds');
-            assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
-            assert AccPromisedBallotLargerThanAccepted(c, ds'); 
-            assert AcceptMsgImpliesAccepted(c, ds');
-            assert PromisedImpliesNoMoreAccepts(c, ds');
-            
-            // Prove Agreement_Inv_Decided properties
-            forall i2 | c.ValidLdrIdx(i2) && LeaderHasDecided(c, ds', i2) 
-            ensures Agreement_Inv_Decided(c, ds', i2)
-            {
-                // Note i2 has been decided in ds; it's not a new decision
-                assert LeaderHasDecided(c, ds, i2); 
-                var b2, v2 := ds.leaders[i2].ballot, ds.leaders[i2].val;
-                assert v2 == v1;
-                assert LargerBallotPhase2LeadersV(c, ds, v2, b2);
-                assert LargerBallotAcceptors(c, ds', v2, b2);
-                assert LargerBallotPromiseMsgs(c, ds', v2, b2);
-                assert LargerBallotProposeMsgs(c, ds', v2, b2);
-                assert QuorumOfCorrespondingAccepts(c, ds', i2);
-                assert LargerBallotsPromiseQrms(c, ds', v2, b2);
-            }
-            assert Agreement_Inv(c, ds');
-        }
+        NextPreservesAgreementInv_SomeoneHadDecided(c, ds, ds');
     } else {
-        var actor, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
-        if actor.agt == Ldr {
-            // If actor is a Leader
-            // TODO 
-            assume false;
-            assert Agreement_Inv(c, ds');
-        } else {
-            // If actor is an Acceptor
-            // This case should be trivial
-            assert Agreement_Inv(c, ds');
-        }
+        NextPreservesAgreementInv_NoneHadDecided(c, ds, ds');
     }
 }
+
+
+lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':DistrSys) 
+    requires Agreement_Inv(c, ds)
+    requires Next(c, ds, ds')
+    requires SomeLeaderHasDecided(c, ds)
+    ensures Agreement_Inv(c, ds')
+{
+    var i1 :| c.ValidLdrIdx(i1) && LeaderHasDecided(c, ds, i1);
+    var b1, v1 := ds.leaders[i1].ballot, ds.leaders[i1].val;
+    var actor, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
+    if actor.agt == Ldr {
+        // If actor is a Leader
+        // TODO 
+        assume false;
+        assert Agreement_Inv(c, ds');
+    } else {
+        // If actor is an Acceptor
+        assert Agreement(c, ds');
+        assert LdrBallotNotBottom(c, ds');
+        assert LdrAcceptsSetUnique(c, ds');
+        assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');
+        assert LdrPromisesSetUnique(c, ds');
+        assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
+        assert AccPromisedBallotLargerThanAccepted(c, ds'); 
+        assert AcceptMsgImpliesAccepted(c, ds');
+        assert PromisedImpliesNoMoreAccepts(c, ds');
+        
+        // Prove Agreement_Inv_Decided properties
+        forall i2 | c.ValidLdrIdx(i2) && LeaderHasDecided(c, ds', i2) 
+        ensures Agreement_Inv_Decided(c, ds', i2)
+        {
+            // Note i2 has been decided in ds; it's not a new decision
+            assert LeaderHasDecided(c, ds, i2); 
+            var b2, v2 := ds.leaders[i2].ballot, ds.leaders[i2].val;
+            assert v2 == v1;
+            assert LargerBallotPhase2LeadersV(c, ds, v2, b2);
+            assert LargerBallotAcceptors(c, ds', v2, b2);
+            assert LargerBallotPromiseMsgs(c, ds', v2, b2);
+            assert LargerBallotProposeMsgs(c, ds', v2, b2);
+            assert QuorumOfCorrespondingAccepts(c, ds', i2);
+            assert LargerBallotsPromiseQrms(c, ds', v2, b2);
+        }
+        assert Agreement_Inv(c, ds');
+    }
+}
+
+lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':DistrSys) 
+    requires Agreement_Inv(c, ds)
+    requires Next(c, ds, ds')
+    requires !SomeLeaderHasDecided(c, ds)
+    ensures Agreement_Inv(c, ds')
+{
+    var actor, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
+    if actor.agt == Ldr {
+        // If actor is a Leader
+        // TODO 
+        assume false;
+        assert Agreement_Inv(c, ds');
+    } else {
+        // If actor is an Acceptor
+        // This case should be trivial
+        assert Agreement_Inv(c, ds');
+    }
+}
+
 
 }

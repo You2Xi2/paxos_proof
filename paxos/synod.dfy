@@ -151,6 +151,16 @@ predicate QuorumOfPromiseMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballo
     && (forall p | p in qrm :: p in ds.network.sentPackets)
 }
 
+/* qrm is a quorum of accept messages with ballot b */
+predicate QuorumOfAcceptMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot) 
+    requires c.WF()
+{
+    && |qrm| >= c.f + 1
+    && (forall p | p in qrm :: p.msg.Accept?)
+    && (forall p | p in qrm :: p.msg.bal == b)
+    && (forall p | p in qrm :: p in ds.network.sentPackets)
+}
+
 predicate LeaderInPhase2(c:Constants, ds:DistrSys, idx:int) 
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(idx)

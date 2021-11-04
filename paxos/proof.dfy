@@ -206,7 +206,7 @@ predicate Agreement_Inv_Decided(c:Constants, ds:DistrSys, i:int)
     && LargerBallotPromiseMsgs(c, ds, v, b)
     && LargerBallotProposeMsgs(c, ds, v, b)
     && LargerBallotsPromiseQrms(c, ds, v, b)
-    && QuorumOfCorrespondingAccepts(c, ds, i)
+    && QuorumOfAcceptsSet(c, ds, i)
 }
 
 /* If v is decided with ballot b, then all phase 2 leaders with ballots
@@ -260,7 +260,7 @@ predicate LargerBallotsPromiseQrms(c:Constants, ds:DistrSys, v:Value, b:Ballot)
     )
 }
 
-predicate QuorumOfCorrespondingAccepts(c:Constants, ds:DistrSys, i:int) 
+predicate QuorumOfAcceptsSet(c:Constants, ds:DistrSys, i:int) 
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(i)
 {
@@ -326,7 +326,21 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
             assert LargerBallotAcceptors(c, ds', v2, b2);
             assert LargerBallotPromiseMsgs(c, ds', v2, b2);
             assert LargerBallotProposeMsgs(c, ds', v2, b2);
-            assert QuorumOfCorrespondingAccepts(c, ds', i2);
+            assert QuorumOfAcceptsSet(c, ds', i2);
+
+            forall b' | BalLtEq(b2, b') 
+            ensures (forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds', qrm, b') 
+                    :: exists p :: p in qrm && BalLtEq(b2, p.msg.vb.b) )
+            {
+                forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds', qrm, b') 
+                ensures exists p :: p in qrm && BalLtEq(b2, p.msg.vb.b) 
+                {
+                    //Proof by contradiction. Suppose false. Then f+1 acceptors promised
+                    //b' without accepting b2. Then by PromisedImpliesNoMoreAccepts, there
+                    // is no quorum of Accept(b2), and (b2) cannot be decided. 
+                    assume false;
+                }
+            }
             assert LargerBallotsPromiseQrms(c, ds', v2, b2);
         }
         assert Agreement_Inv(c, ds');
@@ -361,7 +375,7 @@ lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':Dis
             assert LargerBallotAcceptors(c, ds', v2, b2);
             assert LargerBallotPromiseMsgs(c, ds', v2, b2);
             assert LargerBallotProposeMsgs(c, ds', v2, b2);
-            assert QuorumOfCorrespondingAccepts(c, ds', i2);
+            assert QuorumOfAcceptsSet(c, ds', i2);
             assert LargerBallotsPromiseQrms(c, ds', v2, b2);
         }
         assert Agreement_Inv(c, ds');
@@ -371,6 +385,60 @@ lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':Dis
         assert Agreement_Inv(c, ds');
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+lemma Lemma_DecidedImpliesQuorumOfAccepts(c:Constants, ds:DistrSys, i:int) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrIdx(i) && LeaderHasDecided(c, ds, i);
+    requires LdrAcceptsSetCorrespondToAcceptMsg(c, ds)
+    requires QuorumOfAcceptsSet(c, ds, i);
+    ensures exists qrm :: QuorumOfAcceptMsgs(c, ds, qrm, ds.leaders[i].ballot)
+{
+// Easy way to go around this issue is to make leader store the actual Accept packets
+// instead of just the source.
+
+    var l, b := ds.leaders[i], ds.leaders[i].ballot;
+    var qrm:set<Packet> := {};
+    var accepts := l.accepts;
+    var sentPackets := ds.network.sentPackets;
+    assert |accepts| == c.f+1;
+    assert forall s | s in l.accepts
+        :: Packet(s, Id(Ldr, i), Accept(b)) in sentPackets;
+    var i := 0;
+    while i < c.f + 1 
+        decreases c.f+1 - i
+        invariant |accepts| == c.f+1 - i
+        invariant |qrm| == i
+        invariant forall s | s in accepts :: 
+            (forall p | p in qrm :: p.src != s)
+        invariant forall s | s in accepts :: s in l.accepts
+        invariant forall p | p in qrm :: p.msg.Accept?
+        invariant forall p | p in qrm :: p.msg.bal == b
+        invariant forall p | p in qrm :: p in sentPackets;
+    {
+        var s :| s in accepts;
+        assert s in l.accepts;
+        assert Packet(s, Id(Ldr, i), Accept(b)) in sentPackets;
+        var pkt := Packet(s, Id(Ldr, i), Accept(b));
+        assert pkt in sentPackets;
+        qrm := qrm + {pkt};
+        accepts := accepts - {s};
+
+        i := i + 1;
+    }
+    assert QuorumOfAcceptMsgs(c, ds, qrm, b);
+}
+
 
 
 }

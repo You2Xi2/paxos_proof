@@ -115,13 +115,28 @@ predicate Agreement(c:Constants, ds:DistrSys)
 }
 
 
+predicate Trivialities(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    && LdrBallotNotBottom(c, ds)
+    && AllPacketsValid(c, ds)
+}
+
+predicate AllPacketsValid(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall p | p in ds.network.sentPackets
+    :: ValidPacketSourceDest(c, ds, p)
+}
+
+
 /* Invariants for establishing Agreement */
 predicate Agreement_Inv(c:Constants, ds:DistrSys) 
 {
     && c.WF()
     && ds.WF(c)
     && Agreement(c, ds)
-    && LdrBallotNotBottom(c, ds)
+    && Trivialities(c, ds)
     && LdrAcceptsSetCorrespondToAcceptMsg(c, ds)
     && LdrPromisesSetCorrespondToPromiseMsg(c, ds)
     && AccPromisedBallotLargerThanAccepted(c, ds)
@@ -313,6 +328,7 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
         assert AccPromisedBallotLargerThanAccepted(c, ds'); 
         assert AcceptMsgImpliesAccepted(c, ds');
         assert PromisedImpliesNoMoreAccepts(c, ds');
+        assert Trivialities(c, ds');
         
         // Prove Agreement_Inv_Decided properties
         forall i2 | c.ValidLdrIdx(i2) && LeaderHasDecided(c, ds', i2) 
@@ -335,10 +351,23 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
                 forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds', qrm, b') 
                 ensures exists p :: p in qrm && BalLtEq(b2, p.msg.vb.b) 
                 {
-                    //Proof by contradiction. Suppose false. Then f+1 acceptors promised
-                    //b' without accepting b2. Then by PromisedImpliesNoMoreAccepts, there
-                    // is no quorum of Accept(b2), and (b2) cannot be decided. 
                     assume false;
+                    // Proof by contradiction. Suppose false. Then f+1 acceptors promised
+                    // b' without accepting b2. Then by PromisedImpliesNoMoreAccepts, there
+                    // is no quorum of Accept(b2), and (b2) cannot be decided. 
+                    // if (exists qrm :: 
+                    //         && QuorumOfPromiseMsgs(c, ds', qrm, b')
+                    //         && (forall p:Packet | p in qrm :: !BalLtEq(b2, p.msg.vb.b))
+                    // ){
+                    //     var qrm :| 
+                    //         && QuorumOfPromiseMsgs(c, ds', qrm, b') 
+                    //         && (forall p:Packet | p in qrm :: !BalLtEq(b2, p.msg.vb.b));
+
+                    //     // TODO
+                    //     assume false;
+                    //     Lemma_DecidedImpliesQuorumOfAccepts(c, ds', i2);
+                    //     assert false;
+                    // }
                 }
             }
             assert LargerBallotsPromiseQrms(c, ds', v2, b2);
@@ -363,6 +392,7 @@ lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':Dis
         assert AccPromisedBallotLargerThanAccepted(c, ds'); 
         assert AcceptMsgImpliesAccepted(c, ds');
         assert PromisedImpliesNoMoreAccepts(c, ds');
+        assert Trivialities(c, ds');
         
         // Prove Agreement_Inv_Decided properties
         forall i2 | c.ValidLdrIdx(i2) && LeaderHasDecided(c, ds', i2) 

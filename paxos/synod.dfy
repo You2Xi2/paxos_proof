@@ -135,17 +135,28 @@ predicate ValidActor(c:Constants, actor:Id)
 *****************************************************************************************/
 
 predicate QuorumOfAcceptors(c:Constants, q:set<int>) 
-    requires c.WF()
+    requires c.WF() 
 {
     && |q| >= c.f + 1
     && forall idx | idx in q :: c.ValidAccIdx(idx)
 }
 
+predicate UniqueSources(qrm:set<Packet>) {
+    forall p1, p2 | p1 in qrm && p2 in qrm 
+    :: p1.src == p2.src ==> p1 == p2
+}
+
+predicate SameDest(qrm:set<Packet>) {
+    forall p1, p2 | p1 in qrm && p2 in qrm :: p1.dst != p2.dst
+}
+
 /* qrm is a quorum of promise messages with ballot b */
 predicate QuorumOfPromiseMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot) 
-    requires c.WF()
+    requires c.WF() && ds.WF(c)
 {
     && |qrm| >= c.f + 1
+    && UniqueSources(qrm)
+    && SameDest(qrm)
     && (forall p | p in qrm :: p.msg.Promise?)
     && (forall p | p in qrm :: p.msg.bal == b)
     && (forall p | p in qrm :: p in ds.network.sentPackets)
@@ -156,10 +167,68 @@ predicate QuorumOfAcceptMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot
     requires c.WF()
 {
     && |qrm| >= c.f + 1
+    && UniqueSources(qrm)
+    && SameDest(qrm)
     && (forall p | p in qrm :: p.msg.Accept?)
     && (forall p | p in qrm :: p.msg.bal == b)
     && (forall p | p in qrm :: p in ds.network.sentPackets)
 }
+
+predicate ValidPacketSourceDest(c:Constants, ds:DistrSys, p:Packet) 
+    requires c.WF() && ds.WF(c)
+    requires p in ds.network.sentPackets
+{
+    match p.msg {
+        case Prepare(b) => 
+            && ValidLeaderSource(c, ds, p)
+            && ValidAcceptorDest(c, ds, p)
+        case Promise(b, vb) => 
+            && ValidAcceptorSource(c, ds, p)
+            && ValidLeaderDest(c, ds, p)
+        case Propose(b, v) => 
+            && ValidLeaderSource(c, ds, p)
+            && ValidAcceptorDest(c, ds ,p)
+        case Accept(b) => 
+            && ValidAcceptorSource(c, ds, p)
+            && ValidLeaderDest(c, ds, p)
+        case Preempt(b) => 
+            && ValidAcceptorSource(c, ds, p)
+            && ValidLeaderDest(c, ds, p)
+    }
+}
+
+predicate ValidAcceptorSource(c:Constants, ds:DistrSys, p:Packet) 
+    requires c.WF() && ds.WF(c)
+    requires p in ds.network.sentPackets
+{
+    && p.src.agt == Acc 
+    && c.ValidAccIdx(p.src.idx)
+}
+
+predicate ValidLeaderSource(c:Constants, ds:DistrSys, p:Packet) 
+    requires c.WF() && ds.WF(c)
+    requires p in ds.network.sentPackets
+{
+    && p.src.agt == Ldr 
+    && c.ValidLdrIdx(p.src.idx)
+}
+
+predicate ValidAcceptorDest(c:Constants, ds:DistrSys, p:Packet) 
+    requires c.WF() && ds.WF(c)
+    requires p in ds.network.sentPackets
+{
+    && p.dst.agt == Acc 
+    && c.ValidAccIdx(p.src.idx)
+}
+
+predicate ValidLeaderDest(c:Constants, ds:DistrSys, p:Packet) 
+    requires c.WF() && ds.WF(c)
+    requires p in ds.network.sentPackets
+{
+    && p.dst.agt == Ldr 
+    && c.ValidLdrIdx(p.src.idx)
+}
+
 
 predicate LeaderInPhase2(c:Constants, ds:DistrSys, idx:int) 
     requires c.WF() && ds.WF(c)

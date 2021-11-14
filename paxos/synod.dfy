@@ -60,6 +60,7 @@ datatype DistrSys = DistrSys(
         && |acceptors| == |c.acc_ids|
         && (forall i | c.ValidLdrIdx(i) :: leaders[i].consts.id == c.ldr_ids[i])
         && (forall i | c.ValidLdrIdx(i) :: leaders[i].consts.initval == c.ldr_vals[i])
+        && (forall i | c.ValidLdrIdx(i) :: leaders[i].consts.accConf == c.acc_ids)
         && (forall i | c.ValidLdrIdx(i) :: leaders[i].consts.f == c.f)
         && (forall i | c.ValidAccIdx(i) :: acceptors[i].consts.id == c.acc_ids[i])
     }
@@ -176,7 +177,6 @@ predicate QuorumOfAcceptMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot
 
 predicate ValidPacketSourceDest(c:Constants, ds:DistrSys, p:Packet) 
     requires c.WF() && ds.WF(c)
-    requires p in ds.network.sentPackets
 {
     match p.msg {
         case Prepare(b) => 
@@ -199,7 +199,6 @@ predicate ValidPacketSourceDest(c:Constants, ds:DistrSys, p:Packet)
 
 predicate ValidAcceptorSource(c:Constants, ds:DistrSys, p:Packet) 
     requires c.WF() && ds.WF(c)
-    requires p in ds.network.sentPackets
 {
     && p.src.agt == Acc 
     && c.ValidAccIdx(p.src.idx)
@@ -207,7 +206,6 @@ predicate ValidAcceptorSource(c:Constants, ds:DistrSys, p:Packet)
 
 predicate ValidLeaderSource(c:Constants, ds:DistrSys, p:Packet) 
     requires c.WF() && ds.WF(c)
-    requires p in ds.network.sentPackets
 {
     && p.src.agt == Ldr 
     && c.ValidLdrIdx(p.src.idx)
@@ -215,18 +213,16 @@ predicate ValidLeaderSource(c:Constants, ds:DistrSys, p:Packet)
 
 predicate ValidAcceptorDest(c:Constants, ds:DistrSys, p:Packet) 
     requires c.WF() && ds.WF(c)
-    requires p in ds.network.sentPackets
 {
     && p.dst.agt == Acc 
-    && c.ValidAccIdx(p.src.idx)
+    && c.ValidAccIdx(p.dst.idx)
 }
 
 predicate ValidLeaderDest(c:Constants, ds:DistrSys, p:Packet) 
     requires c.WF() && ds.WF(c)
-    requires p in ds.network.sentPackets
 {
     && p.dst.agt == Ldr 
-    && c.ValidLdrIdx(p.src.idx)
+    && c.ValidLdrIdx(p.dst.idx)
 }
 
 

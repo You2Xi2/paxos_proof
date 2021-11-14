@@ -297,6 +297,7 @@ lemma NextPreservesAgreementInv(c:Constants, ds:DistrSys, ds':DistrSys)
     requires Next(c, ds, ds')
     ensures Agreement_Inv(c, ds')
 {
+    NextPreservesTrivialities(c, ds, ds');
     if SomeLeaderHasDecided(c, ds) {
         NextPreservesAgreementInv_SomeoneHadDecided(c, ds, ds');
     } else {
@@ -305,13 +306,31 @@ lemma NextPreservesAgreementInv(c:Constants, ds:DistrSys, ds':DistrSys)
 }
 
 
+lemma NextPreservesTrivialities(c:Constants, ds:DistrSys, ds':DistrSys) 
+    requires Agreement_Inv(c, ds)
+    requires Next(c, ds, ds')
+    requires Trivialities(c, ds)
+    ensures Trivialities(c, ds')
+{
+
+    var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
+    if actor.agt == Acc {
+        assert recvIos[0] in ds.network.sentPackets;
+    }
+}
+
+
 lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':DistrSys) 
     requires Agreement_Inv(c, ds)
     requires Next(c, ds, ds')
+    requires Trivialities(c, ds')
     requires SomeLeaderHasDecided(c, ds)
+
     ensures Agreement_Inv(c, ds')
 {
+    // TODO
     assume false;
+    NextPreservesTrivialities(c, ds, ds');
     var i1 :| c.ValidLdrIdx(i1) && LeaderHasDecided(c, ds, i1);
     var b1, v1 := ds.leaders[i1].ballot, ds.leaders[i1].val;
     var actor, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
@@ -380,10 +399,10 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
 lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':DistrSys) 
     requires Agreement_Inv(c, ds)
     requires Next(c, ds, ds')
+    requires Trivialities(c, ds')
     requires !SomeLeaderHasDecided(c, ds)
     ensures Agreement_Inv(c, ds')
 {
-    assume false;
     var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
     if actor.agt == Ldr {
         // If actor is a Leader

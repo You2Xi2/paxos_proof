@@ -147,7 +147,7 @@ predicate UniqueSources(qrm:set<Packet>) {
 }
 
 predicate SameDest(qrm:set<Packet>) {
-    forall p1, p2 | p1 in qrm && p2 in qrm :: p1.dst != p2.dst
+    forall p1, p2 | p1 in qrm && p2 in qrm :: p1.dst == p2.dst
 }
 
 /* qrm is a quorum of promise messages with ballot b */

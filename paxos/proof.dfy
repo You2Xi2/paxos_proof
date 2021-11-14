@@ -311,6 +311,7 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
     requires SomeLeaderHasDecided(c, ds)
     ensures Agreement_Inv(c, ds')
 {
+    assume false;
     var i1 :| c.ValidLdrIdx(i1) && LeaderHasDecided(c, ds, i1);
     var b1, v1 := ds.leaders[i1].ballot, ds.leaders[i1].val;
     var actor, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
@@ -382,6 +383,7 @@ lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':Dis
     requires !SomeLeaderHasDecided(c, ds)
     ensures Agreement_Inv(c, ds')
 {
+    assume false;
     var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
     if actor.agt == Ldr {
         // If actor is a Leader
@@ -436,7 +438,6 @@ lemma Lemma_DecidedImpliesQuorumOfAccepts(c:Constants, ds:DistrSys, idx:int)
 {
 // Easy way to go around this issue is to make leader store the actual Accept packets
 // instead of just the source.
-
     var l, b := ds.leaders[idx], ds.leaders[idx].ballot;
     var qrm:set<Packet> := {};
     var accepts := l.accepts;
@@ -455,6 +456,7 @@ lemma Lemma_DecidedImpliesQuorumOfAccepts(c:Constants, ds:DistrSys, idx:int)
         invariant forall p | p in qrm :: p.msg.Accept?
         invariant forall p | p in qrm :: p.msg.bal == b
         invariant forall p | p in qrm :: p in sentPackets;
+        invariant forall p | p in qrm :: p.dst == Id(Ldr, idx);
     {
         var s :| s in accepts;
         assert s in l.accepts;
@@ -466,6 +468,8 @@ lemma Lemma_DecidedImpliesQuorumOfAccepts(c:Constants, ds:DistrSys, idx:int)
 
         i := i + 1;
     }
+    assert UniqueSources(qrm);
+    assert SameDest(qrm);
     assert QuorumOfAcceptMsgs(c, ds, qrm, b);
 }
 

@@ -421,35 +421,23 @@ lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':Dis
 
 
 
-
-
-
-
-
-
-
-
 lemma Lemma_DecidedImpliesQuorumOfAccepts(c:Constants, ds:DistrSys, idx:int) 
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(idx) && LeaderHasDecided(c, ds, idx);
     requires LdrAcceptsSetCorrespondToAcceptMsg(c, ds)
-    requires QuorumOfAcceptsSet(c, ds, idx);
+    requires QuorumOfAcceptsSet(c, ds, idx)
     ensures exists qrm :: QuorumOfAcceptMsgs(c, ds, qrm, ds.leaders[idx].ballot)
 {
-// Easy way to go around this issue is to make leader store the actual Accept packets
-// instead of just the source.
     var l, b := ds.leaders[idx], ds.leaders[idx].ballot;
     var qrm:set<Packet> := {};
     var accepts := l.accepts;
     var sentPackets := ds.network.sentPackets;
-    assert |accepts| == c.f+1;
-    assert forall s | s in l.accepts
-        :: Packet(s, Id(Ldr, idx), Accept(b)) in sentPackets;
     var i := 0;
     while i < c.f + 1 
         decreases c.f+1 - i
         invariant |accepts| == c.f+1 - i
         invariant |qrm| == i
+        invariant UniqueSources(qrm)
         invariant forall s | s in accepts :: 
             (forall p | p in qrm :: p.src != s)
         invariant forall s | s in accepts :: s in l.accepts
@@ -459,20 +447,12 @@ lemma Lemma_DecidedImpliesQuorumOfAccepts(c:Constants, ds:DistrSys, idx:int)
         invariant forall p | p in qrm :: p.dst == Id(Ldr, idx);
     {
         var s :| s in accepts;
-        assert s in l.accepts;
-        assert Packet(s, Id(Ldr, idx), Accept(b)) in sentPackets;
         var pkt := Packet(s, Id(Ldr, idx), Accept(b));
-        assert pkt in sentPackets;
         qrm := qrm + {pkt};
         accepts := accepts - {s};
-
         i := i + 1;
     }
-    assert UniqueSources(qrm);
-    assert SameDest(qrm);
     assert QuorumOfAcceptMsgs(c, ds, qrm, b);
 }
-
-
 
 }

@@ -220,7 +220,7 @@ predicate Agreement_Inv_Decided(c:Constants, ds:DistrSys, i:int)
     && LargerBallotAcceptors(c, ds, v, b)
     && LargerBallotPromiseMsgs(c, ds, v, b)
     && LargerBallotProposeMsgs(c, ds, v, b)
-    && LargerBallotsPromiseQrms(c, ds, v, b)
+    && LargerBallotsPromiseQrms(c, ds, b)
     && QuorumOfAcceptsSet(c, ds, i)
 }
 
@@ -266,13 +266,25 @@ predicate LargerBallotProposeMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot)
 
 /* If v is decided with ballot b, then all Promise quorums for ballots
 * b' >= b must come from an acceptor that accepted (v, b) */
-predicate LargerBallotsPromiseQrms(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+predicate LargerBallotsPromiseQrms(c:Constants, ds:DistrSys, b:Ballot) 
     requires c.WF() && ds.WF(c)
 {
     forall b' | BalLtEq(b, b') 
-    :: (forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds, qrm, b') 
-        :: exists p :: p in qrm && BalLtEq(b, p.msg.vb.b) 
-    )
+    :: EveryLargerBalQuorumHasSeenB(c, ds, b, b')
+}
+
+predicate EveryLargerBalQuorumHasSeenB(c:Constants, ds:DistrSys, b:Ballot, b':Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds, qrm, b') 
+    :: QuorumHasSeenB(c, ds, qrm, b)
+}
+
+predicate QuorumHasSeenB(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+    requires forall p | p in qrm :: p.msg.Promise?
+{
+    exists p :: p in qrm && BalLtEq(b, p.msg.vb.b)
 }
 
 predicate QuorumOfAcceptsSet(c:Constants, ds:DistrSys, i:int) 
@@ -328,8 +340,6 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
 
     ensures Agreement_Inv(c, ds')
 {
-    // TODO
-    assume false;
     NextPreservesTrivialities(c, ds, ds');
     var i1 :| c.ValidLdrIdx(i1) && LeaderHasDecided(c, ds, i1);
     var b1, v1 := ds.leaders[i1].ballot, ds.leaders[i1].val;
@@ -364,33 +374,34 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
             assert LargerBallotProposeMsgs(c, ds', v2, b2);
             assert QuorumOfAcceptsSet(c, ds', i2);
 
+            // Proving LargerBallotsPromiseQrms(c, ds', v2, b2);
             forall b' | BalLtEq(b2, b') 
-            ensures (forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds', qrm, b') 
-                    :: exists p :: p in qrm && BalLtEq(b2, p.msg.vb.b) )
+            ensures EveryLargerBalQuorumHasSeenB(c, ds', b2, b')
             {
                 forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds', qrm, b') 
-                ensures exists p :: p in qrm && BalLtEq(b2, p.msg.vb.b) 
+                ensures QuorumHasSeenB(c, ds', qrm, b2)
                 {
-                    assume false;
                     // Proof by contradiction. Suppose false. Then f+1 acceptors promised
                     // b' without accepting b2. Then by PromisedImpliesNoMoreAccepts, there
                     // is no quorum of Accept(b2), and (b2) cannot be decided. 
-                    // if (exists qrm :: 
-                    //         && QuorumOfPromiseMsgs(c, ds', qrm, b')
-                    //         && (forall p:Packet | p in qrm :: !BalLtEq(b2, p.msg.vb.b))
-                    // ){
-                    //     var qrm :| 
-                    //         && QuorumOfPromiseMsgs(c, ds', qrm, b') 
-                    //         && (forall p:Packet | p in qrm :: !BalLtEq(b2, p.msg.vb.b));
+                    if (exists qrm :: 
+                            && QuorumOfPromiseMsgs(c, ds', qrm, b')
+                            && !QuorumHasSeenB(c, ds', qrm, b2)
+                    ){
+                        var qrm :| 
+                            && QuorumOfPromiseMsgs(c, ds', qrm, b') 
+                            && !QuorumHasSeenB(c, ds', qrm, b2);
+                        assert (forall p:Packet | p in qrm :: !BalLtEq(b2, p.msg.vb.b));
 
-                    //     // TODO
-                    //     assume false;
-                    //     Lemma_DecidedImpliesQuorumOfAccepts(c, ds', i2);
-                    //     assert false;
-                    // }
+                        
+                        // TODO
+                        assume false;
+                        Lemma_DecidedImpliesQuorumOfAccepts(c, ds', i2);
+                        assert false;
+                    }
                 }
             }
-            assert LargerBallotsPromiseQrms(c, ds', v2, b2);
+            assert LargerBallotsPromiseQrms(c, ds', b2);
         }
         assert Agreement_Inv(c, ds');
     }
@@ -427,7 +438,7 @@ lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':Dis
             assert LargerBallotPromiseMsgs(c, ds', v2, b2);
             assert LargerBallotProposeMsgs(c, ds', v2, b2);
             assert QuorumOfAcceptsSet(c, ds', i2);
-            assert LargerBallotsPromiseQrms(c, ds', v2, b2);
+            assert LargerBallotsPromiseQrms(c, ds', b2);
         }
         assert Agreement_Inv(c, ds');
     } else {

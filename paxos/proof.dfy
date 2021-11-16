@@ -176,19 +176,27 @@ predicate AccPromisedBallotLargerThanAccepted(c:Constants, ds:DistrSys)
 }
 
 
-/* If a acceptor acc promised b, then there can be no accept messages in network with 
-* ballot b' such that current acc.accepted.b < b'< b */
+/* If a promised packet promised b', with previously accepted (v, b), then there can be no 
+* accept messages in network, from the same acceptor, with ballot x 
+* such that b < x < b' */
 predicate PromisedImpliesNoMoreAccepts(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    forall i, p | 
-        && c.ValidAccIdx(i) 
-        && p in ds.network.sentPackets 
-        && p.src == Id(Acc, i) 
-        && p.msg.Accept?
-    ::
-        || BalLtEq(ds.acceptors[i].promised, p.msg.bal)
-        || BalLtEq(p.msg.bal, ds.acceptors[i].accepted.b)
+    forall i, prom_p | 
+        && prom_p in ds.network.sentPackets 
+        && prom_p.src == Id(Acc, i) 
+        && prom_p.msg.Promise?
+    :: 
+    var b' := prom_p.msg.bal;
+    var b := prom_p.msg.vb.b;
+    (forall acc_p | 
+        && acc_p in ds.network.sentPackets 
+        && acc_p.src == Id(Acc, i)
+        && prom_p.msg.Accept?
+    :: 
+        || BalLtEq(acc_p.msg.bal, b)
+        || BalLtEq(b', acc_p.msg.bal)
+    )
 }
 
 /* If an Accept msg in network with src x, ballot b, then balval of acceptor x 
@@ -391,11 +399,26 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
                         var qrm :| 
                             && QuorumOfPromiseMsgs(c, ds', qrm, b') 
                             && !QuorumHasSeenB(c, ds', qrm, b2);
-                        assert (forall p:Packet | p in qrm :: !BalLtEq(b2, p.msg.vb.b));
+                        // No Promise packet in this b' quorum has seem b2, which is already decided
+                        assert (forall p:Packet | p in qrm :: BalLt(p.msg.vb.b, b2));
 
+                        // Now prove that the corresponding acceptors did not accept (b2, v2)
                         
-                        // TODO
+
+
                         assume false;
+                        assert PromisedImpliesNoMoreAccepts(c, ds');
+
+                        // forall i, p | 
+                        //     && c.ValidAccIdx(i) 
+                        //     && p in ds'.network.sentPackets 
+                        //     && p.src == Id(Acc, i) 
+                        //     && p.msg.Accept?
+                        // ::
+                        //     || BalLtEq(ds.acceptors[i].promised, p.msg.bal)
+                        //     || BalLtEq(p.msg.bal, ds.acceptors[i].accepted.b)
+
+
                         Lemma_DecidedImpliesQuorumOfAccepts(c, ds', i2);
                         assert false;
                     }
@@ -406,6 +429,7 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
         assert Agreement_Inv(c, ds');
     }
 }
+
 
 lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':DistrSys) 
     requires Agreement_Inv(c, ds)

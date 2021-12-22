@@ -140,7 +140,7 @@ predicate Agreement_Inv_Decided(c:Constants, ds:DistrSys, i:int)
     && LargerBallotPromiseMsgs(c, ds, v, b)
     && LargerBallotProposeMsgs(c, ds, v, b)
     && LargerBallotsPromiseQrms(c, ds, b)
-    && QuorumOfAcceptsSet(c, ds, i)
+    && LeaderHasQuorumOfAccepts(c, ds, i)
 }
 
 /* If v is decided with ballot b, then all phase 2 leaders with ballots
@@ -206,7 +206,7 @@ predicate QuorumHasSeenB(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot)
     exists p :: p in qrm && BalLtEq(b, p.msg.vb.b)
 }
 
-predicate QuorumOfAcceptsSet(c:Constants, ds:DistrSys, i:int) 
+predicate LeaderHasQuorumOfAccepts(c:Constants, ds:DistrSys, i:int) 
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(i)
 {
@@ -256,7 +256,7 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
     requires Next(c, ds, ds')
     requires Trivialities(c, ds')
     requires SomeLeaderHasDecided(c, ds)
-
+    ensures SomeLeaderHasDecided(c, ds')
     ensures Agreement_Inv(c, ds')
 {
     NextPreservesTrivialities(c, ds, ds');
@@ -291,7 +291,7 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
             assert LargerBallotAcceptors(c, ds', v2, b2);
             assert LargerBallotPromiseMsgs(c, ds', v2, b2);
             assert LargerBallotProposeMsgs(c, ds', v2, b2);
-            assert QuorumOfAcceptsSet(c, ds', i2);
+            assert LeaderHasQuorumOfAccepts(c, ds', i2);
 
             // Proving LargerBallotsPromiseQrms(c, ds', v2, b2);
             forall b' | BalLtEq(b2, b') 
@@ -325,7 +325,7 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
                         //     || BalLtEq(ds.acceptors[i].promised, p.msg.bal)
                         //     || BalLtEq(p.msg.bal, ds.acceptors[i].accepted.b)
 
-                        assume false;
+                        // assume false;
                         Lemma_DecidedImpliesQuorumOfAccepts(c, ds', i2);
                         assert false;
                     }
@@ -368,7 +368,7 @@ lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':Dis
             assert LargerBallotAcceptors(c, ds', v2, b2);
             assert LargerBallotPromiseMsgs(c, ds', v2, b2);
             assert LargerBallotProposeMsgs(c, ds', v2, b2);
-            assert QuorumOfAcceptsSet(c, ds', i2);
+            assert LeaderHasQuorumOfAccepts(c, ds', i2);
             assert LargerBallotsPromiseQrms(c, ds', b2);
         }
         assert Agreement_Inv(c, ds');
@@ -386,7 +386,7 @@ lemma Lemma_DecidedImpliesQuorumOfAccepts(c:Constants, ds:DistrSys, idx:int)
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(idx) && LeaderHasDecided(c, ds, idx);
     requires LdrAcceptsSetCorrespondToAcceptMsg(c, ds)
-    requires QuorumOfAcceptsSet(c, ds, idx)
+    requires LeaderHasQuorumOfAccepts(c, ds, idx)
     ensures exists qrm :: QuorumOfAcceptMsgs(c, ds, qrm, ds.leaders[idx].ballot)
 {
     var l, b := ds.leaders[idx], ds.leaders[idx].ballot;

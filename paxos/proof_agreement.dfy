@@ -2,12 +2,14 @@ include "types.dfy"
 include "network.dfy"
 include "agents.dfy"
 include "synod.dfy"
+include "proof_helper.dfy"
 
-module Proof {
+module Proof_Agreement {
 import opened Network
 import opened Agents
 import opened Types
 import opened Synod
+import opened Proof_Helper
 
 
 /*****************************************************************************************
@@ -31,13 +33,6 @@ predicate Trivialities(c:Constants, ds:DistrSys)
 {
     && LdrBallotNotBottom(c, ds)
     && AllPacketsValid(c, ds)
-}
-
-predicate AllPacketsValid(c:Constants, ds:DistrSys) 
-    requires c.WF() && ds.WF(c)
-{
-    forall p | p in ds.network.sentPackets
-    :: ValidPacketSourceDest(c, ds, p)
 }
 
 
@@ -93,21 +88,25 @@ predicate AccPromisedBallotLargerThanAccepted(c:Constants, ds:DistrSys)
 predicate PromisedImpliesNoMoreAccepts(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    forall i, prom_p | 
+    forall prom_p | 
         && prom_p in ds.network.sentPackets 
-        && prom_p.src == Id(Acc, i) 
         && prom_p.msg.Promise?
     :: 
-    var b' := prom_p.msg.bal;
-    var b := prom_p.msg.vb.b;
-    (forall acc_p | 
+    var promised_bal := prom_p.msg.bal;
+    var accepted_bal := prom_p.msg.vb.b;
+    AcceptMessageConstraint(c, ds, prom_p.src, promised_bal, accepted_bal)
+}
+
+predicate AcceptMessageConstraint(c:Constants, ds:DistrSys, src:Id, promised_bal:Ballot, accepted_bal:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    forall acc_p | 
         && acc_p in ds.network.sentPackets 
-        && acc_p.src == Id(Acc, i)
-        && prom_p.msg.Accept?
+        && acc_p.src == src
+        && acc_p.msg.Accept?
     :: 
-        || BalLtEq(acc_p.msg.bal, b)
-        || BalLtEq(b', acc_p.msg.bal)
-    )
+        || BalLtEq(acc_p.msg.bal, accepted_bal)
+        || BalLtEq(promised_bal, acc_p.msg.bal)
 }
 
 /* If an Accept msg in network with src x, ballot b, then balval of acceptor x 
@@ -188,11 +187,11 @@ predicate LargerBallotProposeMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot)
 predicate LargerBallotsPromiseQrms(c:Constants, ds:DistrSys, b:Ballot) 
     requires c.WF() && ds.WF(c)
 {
-    forall b' | BalLtEq(b, b') 
-    :: EveryLargerBalQuorumHasSeenB(c, ds, b, b')
+    forall b' | BalLt(b, b') 
+    :: LargerBalQuorumHasSeenB(c, ds, b, b')
 }
 
-predicate EveryLargerBalQuorumHasSeenB(c:Constants, ds:DistrSys, b:Ballot, b':Ballot) 
+predicate LargerBalQuorumHasSeenB(c:Constants, ds:DistrSys, b:Ballot, b':Ballot) 
     requires c.WF() && ds.WF(c)
 {
     forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds, qrm, b') 
@@ -254,7 +253,6 @@ lemma NextPreservesTrivialities(c:Constants, ds:DistrSys, ds':DistrSys)
 lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':DistrSys) 
     requires Agreement_Inv(c, ds)
     requires Next(c, ds, ds')
-    requires Trivialities(c, ds')
     requires SomeLeaderHasDecided(c, ds)
     ensures SomeLeaderHasDecided(c, ds')
     ensures Agreement_Inv(c, ds')
@@ -271,13 +269,13 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
     } else {
         // If actor is an Acceptor
         assert Agreement(c, ds');
-        assert LdrBallotNotBottom(c, ds');
+        assert Trivialities(c, ds');
+        // assert LdrBallotNotBottom(c, ds');
         assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');
         assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
         assert AccPromisedBallotLargerThanAccepted(c, ds'); 
+        assume PromisedImpliesNoMoreAccepts(c, ds');  // TODO: Assume for now
         assert AcceptMsgImpliesAccepted(c, ds');
-        assert PromisedImpliesNoMoreAccepts(c, ds');
-        assert Trivialities(c, ds');
         
         // Prove Agreement_Inv_Decided properties
         forall i2 | c.ValidLdrIdx(i2) && LeaderHasDecided(c, ds', i2) 
@@ -294,8 +292,8 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
             assert LeaderHasQuorumOfAccepts(c, ds', i2);
 
             // Proving LargerBallotsPromiseQrms(c, ds', v2, b2);
-            forall b' | BalLtEq(b2, b') 
-            ensures EveryLargerBalQuorumHasSeenB(c, ds', b2, b')
+            forall b' | BalLt(b2, b') 
+            ensures LargerBalQuorumHasSeenB(c, ds', b2, b')
             {
                 forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds', qrm, b') 
                 ensures QuorumHasSeenB(c, ds', qrm, b2)
@@ -314,19 +312,61 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
                         assert (forall p:Packet | p in qrm :: BalLt(p.msg.vb.b, b2));
 
                         // Now prove that the corresponding acceptors did not accept (b2, v2)
+                        forall acc_p | 
+                                && acc_p in ds'.network.sentPackets 
+                                && (exists prom_p : Packet :: prom_p in qrm && acc_p.src == prom_p.src)
+                                && acc_p.msg.Accept?
+                        ensures acc_p.msg.bal != b2
+                        {
+                            assert PromisedImpliesNoMoreAccepts(c, ds');
+                            var prom_p : Packet :| prom_p in qrm && acc_p.src == prom_p.src;
+                            var idx := prom_p.src.idx;
+                            assert prom_p.msg.Promise?;
+                            assert prom_p in ds'.network.sentPackets;
+                            assert prom_p.src == Id(Acc, idx);
+                            assert acc_p.src == Id(Acc, idx);
+                            assert AcceptMessageConstraint(c, ds', prom_p.src, prom_p.msg.bal, prom_p.msg.vb.b);
 
-                        assert PromisedImpliesNoMoreAccepts(c, ds');
-                        // forall i, p | 
-                        //     && c.ValidAccIdx(i) 
-                        //     && p in ds'.network.sentPackets 
-                        //     && p.src == Id(Acc, i) 
-                        //     && p.msg.Accept?
-                        // ::
-                        //     || BalLtEq(ds.acceptors[i].promised, p.msg.bal)
-                        //     || BalLtEq(p.msg.bal, ds.acceptors[i].accepted.b)
+                            assert BalLt(prom_p.msg.vb.b, b2);
+                            assert BalLt(b2, b');
+                            assert prom_p.msg.bal == b';
+                            assert  || BalLtEq(acc_p.msg.bal, prom_p.msg.vb.b)
+                                    || BalLtEq(prom_p.msg.bal, acc_p.msg.bal);
+                            if BalLtEq(acc_p.msg.bal, prom_p.msg.vb.b) {
+                                assert BalLt(acc_p.msg.bal, b2);
+                                assert acc_p.msg.bal != b2;
+                            } else {
+                                assert BalLt(b2, acc_p.msg.bal);
+                                assert acc_p.msg.bal != b2;
+                            }
+                        }
 
-                        // assume false;
+
+                        forall acc_set : set<Packet> | 
+                                && UniqueSources(acc_set)
+                                && (forall p | p in acc_set :: p.msg.Accept?)
+                                && (forall p | p in acc_set :: p.msg.bal == b2)
+                                && (forall p | p in acc_set :: p in ds'.network.sentPackets)
+                        ensures |acc_set| < c.f + 1
+                        {
+                            // TODO
+                            // assume false;·
+                            if |acc_set| >= c.f + 1 {
+                                assert QuorumOfAcceptMsgs(c, ds', acc_set, b2);
+                                QuorumIntersection(c, ds', qrm, b', acc_set, b2);
+                                // assert exists acc_id :: 
+                                //     && (exists prom_p : Packet :: prom_p in qrm && prom_p.src == acc_id)
+                                //     && (exists acc_p : Packet :: acc_p in acc_set && acc_p.src == acc_id);
+
+                                assert false;
+                            }
+                        }
+
+
+
                         Lemma_DecidedImpliesQuorumOfAccepts(c, ds', i2);
+
+
                         assert false;
                     }
                 }
@@ -341,7 +381,6 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
 lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':DistrSys) 
     requires Agreement_Inv(c, ds)
     requires Next(c, ds, ds')
-    requires Trivialities(c, ds')
     requires !SomeLeaderHasDecided(c, ds)
     ensures Agreement_Inv(c, ds')
 {
@@ -375,6 +414,7 @@ lemma NextPreservesAgreementInv_NoneHadDecided(c:Constants, ds:DistrSys, ds':Dis
     } else {
         // If actor is an Acceptor
         // This case should be trivial
+        assume false;
         assert Agreement_Inv(c, ds');
     }
 }

@@ -3,7 +3,7 @@ include "network.dfy"
 include "agents.dfy"
 include "synod.dfy"
 
-module Proof {
+module Proof_Validity {
 import opened Network
 import opened Agents
 import opened Types

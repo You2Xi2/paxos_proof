@@ -157,7 +157,7 @@ predicate QuorumOfPromiseMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballo
 {
     && |qrm| >= c.f + 1
     && UniqueSources(qrm)
-    && SameDest(qrm)
+    // && SameDest(qrm)
     && (forall p | p in qrm :: p.msg.Promise?)
     && (forall p | p in qrm :: p.msg.bal == b)
     && (forall p | p in qrm :: p in ds.network.sentPackets)
@@ -169,11 +169,20 @@ predicate QuorumOfAcceptMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot
 {
     && |qrm| >= c.f + 1
     && UniqueSources(qrm)
-    && SameDest(qrm)
+    // && SameDest(qrm)
     && (forall p | p in qrm :: p.msg.Accept?)
     && (forall p | p in qrm :: p.msg.bal == b)
     && (forall p | p in qrm :: p in ds.network.sentPackets)
 }
+
+
+predicate AllPacketsValid(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall p | p in ds.network.sentPackets
+    :: ValidPacketSourceDest(c, ds, p)
+}
+
 
 predicate ValidPacketSourceDest(c:Constants, ds:DistrSys, p:Packet) 
     requires c.WF() && ds.WF(c)

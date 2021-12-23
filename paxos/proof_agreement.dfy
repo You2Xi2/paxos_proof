@@ -152,7 +152,6 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided_AcceptorAction_PromisedImplies
 {}
 
 
-
 lemma NextPreservesAgreementInv_SomeoneHadDecided_LeaderAction(c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
     requires Agreement_Inv(c, ds)
     requires Next(c, ds, ds')
@@ -166,22 +165,11 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided_LeaderAction(c:Constants, ds:D
     var i1 :| c.ValidLdrIdx(i1) && LeaderHasDecided(c, ds, i1);
     var b1, v1 := ds.leaders[i1].ballot, ds.leaders[i1].val;
 
-    assert Agreement(c, ds');   // Needs proof
-
-
-
-
-    assume false;
-    assert Trivialities(c, ds');
-    assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');
-    assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
-    assert AccPromisedBallotLargerThanAccepted(c, ds');
-    assert AcceptMsgImpliesAccepted(c, ds');
-    assert PromisedImpliesNoMoreAccepts(c, ds');
-
     forall i | c.ValidLdrIdx(i) && LeaderHasDecided(c, ds', i) 
     ensures Agreement_Inv_Decided(c, ds', i)
     {
+         // TODO
+        assume false;
         var b, v := ds'.leaders[i].ballot, ds'.leaders[i].val;
         assert LargerBallotPhase2LeadersV(c, ds', v, b);
         assert LargerBallotAcceptors(c, ds', v, b);     // Trivial
@@ -190,8 +178,62 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided_LeaderAction(c:Constants, ds:D
         assert LargerBallotsPromiseQrms(c, ds', b);
         assert LeaderHasQuorumOfAccepts(c, ds', i);
     }
-
+    NextPreservesAgreementInv_SomeoneHadDecided_LeaderAction_Agreement(c, ds, ds', actor, recvIos, sendIos);
+    assert Trivialities(c, ds');
+    assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');
+    assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
+    assert AccPromisedBallotLargerThanAccepted(c, ds');
+    assert AcceptMsgImpliesAccepted(c, ds');
+    assert PromisedImpliesNoMoreAccepts(c, ds');
     assert Agreement_Inv(c, ds');
+}
+
+
+lemma NextPreservesAgreementInv_SomeoneHadDecided_LeaderAction_Agreement(c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Inv(c, ds)
+    requires Next(c, ds, ds')
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires SomeLeaderHasDecided(c, ds)
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires actor.agt == Ldr
+    ensures SomeLeaderHasDecided(c, ds')
+    ensures Agreement(c, ds')
+{
+    var i1 :| c.ValidLdrIdx(i1) && LeaderHasDecided(c, ds, i1);
+    var b1, v1 := ds.leaders[i1].ballot, ds.leaders[i1].val;
+
+    forall i2 | i2 != i1 && c.ValidLdrIdx(i2) && LeaderHasDecided(c, ds', i2) 
+    ensures TwoLeadersHaveSameV(c, ds', i1, i2) 
+    {
+        var b2, v2 := ds.leaders[i2].ballot, ds.leaders[i2].val;
+        if actor.agt == Ldr {
+            if actor.idx == i2 {
+                if !LeaderHasDecided(c, ds, i2) {
+                    // This is where the heavy lifting is
+                    assert LeaderInPhase2(c, ds, i2);
+                    if BalLtEq(b1, b2) {
+                        assert LeaderHasValueV(c, ds, i2, v1);
+                        assert LeaderHasValueV(c, ds', i2, v1);
+                    } else {
+                        // TODO
+                        assume false;
+
+                        assert LargerBallotPhase2LeadersV(c, ds', v2, b2);
+                        assert BalLtEq(b2, b1);
+                        assert LeaderHasValueV(c, ds', i1, v2);
+                    }
+                } else {
+                    assert TwoLeadersHaveSameV(c, ds', i1, i2);
+                }
+            } else {
+                assert LeaderHasDecided(c, ds, i2);
+                assert TwoLeadersHaveSameV(c, ds', i1, i2);
+            }
+        } else { 
+            assert TwoLeadersHaveSameV(c, ds', i1, i2);
+        }
+    }
+    assert Agreement(c, ds');   
 }
 
 

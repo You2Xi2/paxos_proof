@@ -61,14 +61,10 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
     ensures SomeLeaderHasDecided(c, ds')
     ensures Agreement_Inv(c, ds')
 {
-    // var i1 :| c.ValidLdrIdx(i1) && LeaderHasDecided(c, ds, i1);
-    // var b1, v1 := ds.leaders[i1].ballot, ds.leaders[i1].val;
     var actor, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
     if actor.agt == Ldr {
-        // If actor is a Leader
         NextPreservesAgreementInv_SomeoneHadDecided_LeaderAction(c, ds, ds', actor, recvIos, sendIos);
     } else {
-        // If actor is an Acceptor
         NextPreservesAgreementInv_SomeoneHadDecided_AcceptorAction(c, ds, ds', actor, recvIos, sendIos);
     }
 }
@@ -84,10 +80,7 @@ lemma {:timeLimitMultiplier 2} NextPreservesAgreementInv_SomeoneHadDecided_Accep
     ensures Agreement_Inv(c, ds')
 {
     NextPreservesTrivialities(c, ds, ds');
-    var i1 :| c.ValidLdrIdx(i1) && LeaderHasDecided(c, ds, i1);
-    var b1, v1 := ds.leaders[i1].ballot, ds.leaders[i1].val;
-
-    assume PromisedImpliesNoMoreAccepts(c, ds');  // TODO: Assume for now
+    NextPreservesAgreementInv_SomeoneHadDecided_AcceptorAction_PromisedImpliesNoMoreAccepts(c, ds, ds', actor, recvIos, sendIos);
     
     // Prove Agreement_Inv_Decided properties
     forall i2 | c.ValidLdrIdx(i2) && LeaderHasDecided(c, ds', i2) 
@@ -96,7 +89,6 @@ lemma {:timeLimitMultiplier 2} NextPreservesAgreementInv_SomeoneHadDecided_Accep
         // Note i2 has been decided in ds; it's not a new decision
         assert LeaderHasDecided(c, ds, i2); 
         var b2, v2 := ds.leaders[i2].ballot, ds.leaders[i2].val;
-        assert v2 == v1;
 
         // Proving LargerBallotsPromiseQrms(c, ds', v2, b2);
         forall b' | BalLt(b2, b') 
@@ -116,14 +108,13 @@ lemma {:timeLimitMultiplier 2} NextPreservesAgreementInv_SomeoneHadDecided_Accep
                         && QuorumOfPromiseMsgs(c, ds', prom_qrm, b') 
                         && !QuorumHasSeenB(c, ds', prom_qrm, b2);
                     // Now prove that the corresponding acceptors did not accept (b2, v2)
+                    assert PromisedImpliesNoMoreAccepts(c, ds');
                     forall acc_p | 
                             && acc_p in ds'.network.sentPackets 
                             && (exists prom_p : Packet :: prom_p in prom_qrm && acc_p.src == prom_p.src)
                             && acc_p.msg.Accept?
                     ensures acc_p.msg.bal != b2
-                    {
-                        assert PromisedImpliesNoMoreAccepts(c, ds');
-                    }
+                    {}
                     forall acc_set : set<Packet> | 
                             && UniqueSources(acc_set)
                             && (forall p | p in acc_set :: p.msg.Accept?)
@@ -144,6 +135,33 @@ lemma {:timeLimitMultiplier 2} NextPreservesAgreementInv_SomeoneHadDecided_Accep
         }
         assert LargerBallotsPromiseQrms(c, ds', b2);
     }
+}
+
+
+lemma NextPreservesAgreementInv_SomeoneHadDecided_AcceptorAction_PromisedImpliesNoMoreAccepts(c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Inv(c, ds)
+    requires Next(c, ds, ds')
+    requires ds'.WF(c)
+    requires Trivialities(c, ds')
+    requires SomeLeaderHasDecided(c, ds)
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires actor.agt == Acc
+    ensures SomeLeaderHasDecided(c, ds')
+    ensures PromisedImpliesNoMoreAccepts(c, ds')
+{
+    forall prom_p | 
+        && prom_p in ds'.network.sentPackets 
+        && prom_p.msg.Promise?
+    ensures AcceptorConstraint(c, ds', prom_p.src, prom_p.msg.bal, prom_p.msg.vb.b)
+    {
+
+    }
+    forall prom_p | 
+        && prom_p in ds'.network.sentPackets 
+        && prom_p.msg.Promise?
+    ensures AcceptMessageConstraint(c, ds', prom_p.src, prom_p.msg.bal, prom_p.msg.vb.b)
+    {}
+    assert PromisedImpliesNoMoreAccepts(c, ds');
 }
 
 

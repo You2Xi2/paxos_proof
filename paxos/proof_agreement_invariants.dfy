@@ -93,22 +93,38 @@ predicate AccPromisedBallotLargerThanAccepted(c:Constants, ds:DistrSys)
 }
 
 
-/* If a promised packet promised b', with previously accepted (v, b), then there can be no 
-* accept messages in network, from the same acceptor, with ballot x 
-* such that b < x < b' */
+/* If a promised packet promised b', with previously accepted (v, b), then 
+*   - there can be no accept messages in network, from the same acceptor, 
+*       with ballot x such that b < x < b' 
+*   - the acceptor either has (v, b) accepted, or accepted some ballot >= b'
+*/
+
 predicate PromisedImpliesNoMoreAccepts(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
+    requires AllPacketsValid(c, ds) 
 {
     forall prom_p | 
         && prom_p in ds.network.sentPackets 
         && prom_p.msg.Promise?
     :: 
-    var promised_bal := prom_p.msg.bal;
-    var accepted_bal := prom_p.msg.vb.b;
-    AcceptMessageConstraint(c, ds, prom_p.src, promised_bal, accepted_bal)
+    var p1_promised_bal := prom_p.msg.bal;
+    var p1_accepted_bal := prom_p.msg.vb.b;
+    && AcceptorConstraint(c, ds, prom_p.src, p1_promised_bal, p1_accepted_bal)
+    && AcceptMessageConstraint(c, ds, prom_p.src, p1_promised_bal, p1_accepted_bal)
 }
 
-predicate AcceptMessageConstraint(c:Constants, ds:DistrSys, src:Id, promised_bal:Ballot, accepted_bal:Ballot) 
+predicate AcceptorConstraint(c:Constants, ds:DistrSys, src:Id, p1_promised_bal:Ballot, p1_accepted_bal:Ballot) 
+    requires c.WF() && ds.WF(c)
+    requires src.agt == Acc && c.ValidAccIdx(src.idx)
+{
+    var acc := ds.acceptors[src.idx];
+    && BalLtEq(p1_promised_bal, acc.promised)
+    && (|| acc.accepted.b == p1_accepted_bal
+        || BalLtEq(p1_promised_bal, acc.accepted.b)
+    )
+}
+
+predicate AcceptMessageConstraint(c:Constants, ds:DistrSys, src:Id, p1_promised_bal:Ballot, p1_accepted_bal:Ballot) 
     requires c.WF() && ds.WF(c)
 {
     forall acc_p | 
@@ -116,8 +132,8 @@ predicate AcceptMessageConstraint(c:Constants, ds:DistrSys, src:Id, promised_bal
         && acc_p.src == src
         && acc_p.msg.Accept?
     :: 
-        || BalLtEq(acc_p.msg.bal, accepted_bal)
-        || BalLtEq(promised_bal, acc_p.msg.bal)
+        || BalLtEq(acc_p.msg.bal, p1_accepted_bal)
+        || BalLtEq(p1_promised_bal, acc_p.msg.bal)
 }
 
 /* If an Accept msg in network with src x, ballot b, then balval of acceptor x 

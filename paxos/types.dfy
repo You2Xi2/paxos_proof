@@ -11,7 +11,7 @@ datatype ValBal = VB(v:Value, b:Ballot)
 datatype Message = Prepare(bal:Ballot)
                 | Promise(bal:Ballot, vb:ValBal)  //valbal is the value-ballot pair with which the value was accepted
                 | Propose(bal:Ballot, val:Value)
-                | Accept(bal:Ballot)
+                | Accept(bal:Ballot, val:Value)
                 | Preempt(bal:Ballot)
 
 datatype Packet = Packet(src:Id, dst:Id, msg:Message)

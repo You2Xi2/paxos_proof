@@ -21,36 +21,14 @@ predicate Agreement(c:Constants, ds:DistrSys)
     :: TwoLeadersHaveSameV(c, ds, i1, i2)
 }
 
-/* Invariants for establishing Agreement */
-predicate Agreement_Inv(c:Constants, ds:DistrSys) 
-{
-    && c.WF()
-    && ds.WF(c)
-    && Agreement(c, ds)
-    && Trivialities(c, ds)
-    && LdrAcceptsSetCorrespondToAcceptMsg(c, ds)
-    && LdrPromisesSetCorrespondToPromiseMsg(c, ds)
-    && AccPromisedBallotLargerThanAccepted(c, ds)
-    && AcceptMsgImpliesAccepted(c, ds)
-    && PromisedImpliesNoMoreAccepts(c, ds)
-    && (forall i | c.ValidLdrIdx(i) && LeaderHasDecided(c, ds, i) 
-        :: Agreement_Inv_Decided(c, ds, i)
-    )
-}
 
-
-/* Things that are true if v is decided with ballot b. */
-predicate Agreement_Inv_Decided(c:Constants, ds:DistrSys, i:int) 
+/* Only one value can be chosen */
+predicate Agreement_Chosen(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
-    requires c.ValidLdrIdx(i) && LeaderHasDecided(c, ds, i) 
+    requires AllPacketsValid(c, ds)
 {
-    var b, v := ds.leaders[i].ballot, ds.leaders[i].val;
-    && LargerBallotPhase2LeadersV(c, ds, v, b)
-    && LargerBallotAcceptors(c, ds, v, b)
-    && LargerBallotPromiseMsgs(c, ds, v, b)
-    && LargerBallotProposeMsgs(c, ds, v, b)
-    && LargerBallotsPromiseQrms(c, ds, b)
-    && LeaderHasQuorumOfAccepts(c, ds, i)
+    forall b1, b2, v1, v2 | Chosen(c, ds, b1, v1) && Chosen(c, ds, b2, v2)
+    :: v1 == v2
 }
 
 
@@ -62,6 +40,158 @@ predicate Trivialities(c:Constants, ds:DistrSys)
 }
 
 
+/* Invariants for establishing Agreement */
+predicate Agreement_Chosen_Inv(c:Constants, ds:DistrSys) 
+{
+    && c.WF()
+    && ds.WF(c)
+    && Trivialities(c, ds)
+    
+    && Agreement_Chosen(c, ds)
+    && OneValuePerBallot(c, ds)
+
+    // Leader state
+    && LdrAcceptsSetCorrespondToAcceptMsg(c, ds)
+    && LdrPromisesSetCorrespondToPromiseMsg(c, ds)
+
+    // Acceptor state
+    && AccPromisedBallotLargerThanAccepted(c, ds)
+
+    // Messages
+    && PromiseVBImpliesAcceptMsg(c, ds)
+    && AcceptMsgImpliesAccepted(c, ds)
+    && AcceptedImpliesAcceptMessage(c, ds)
+    && AcceptMsgImpliesProposeMsg(c, ds)
+    && ProposeMsgImpliesQuorumOfPromise(c, ds)
+    && PromisedImpliesNoMoreAccepts(c, ds)
+
+    // Chosen
+    && (forall b, v | Chosen(c, ds, b, v) 
+        :: Agreement_Chosen_Inv_SomeValChosen(c, ds, b, v)
+    )
+}
+
+
+/* Things that are true if v is decided with ballot b. */
+predicate Agreement_Chosen_Inv_SomeValChosen(c:Constants, ds:DistrSys, b:Ballot, v:Value) 
+    requires c.WF() && ds.WF(c)
+    requires AllPacketsValid(c, ds)
+    requires Chosen(c, ds, b, v) 
+{
+    && LargerBallotPhase2LeadersV(c, ds, v, b)
+    && LargerBallotAcceptors(c, ds, v, b)
+    && LargerBallotPromiseMsgs(c, ds, v, b)
+    && LargerBallotProposeMsgs(c, ds, v, b)
+    && LargerBallotsPromiseQrms(c, ds, b)
+}
+
+
+/* Only one value can be associated with each ballot */
+predicate OneValuePerBallot(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    && (forall l1, l2 | c.ValidLdrIdx(l1) && c.ValidLdrIdx(l2) && l1!=l2 :: ds.leaders[l1].ballot != ds.leaders[l2].ballot)
+    && (forall b, prop_p1, prop_p2 | 
+        && prop_p1 in ds.network.sentPackets && prop_p2 in ds.network.sentPackets
+        && prop_p1.msg.Propose? && prop_p2.msg.Propose?
+        && prop_p1.msg.bal == b && prop_p2.msg.bal == b 
+        :: 
+        prop_p1.msg.val == prop_p2.msg.val
+    )
+}
+
+
+/* For each promise message p, if it contains an accepted (v, b), then there is an 
+* Accept(b) in the network from the same source */
+predicate PromiseVBImpliesAcceptMsg(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall prom_p | 
+        && prom_p in ds.network.sentPackets 
+        && prom_p.msg.Promise?
+        && prom_p.msg.vb.b != Bottom
+    :: 
+    (exists acc_p :: 
+        && acc_p in ds.network.sentPackets
+        && acc_p.msg.Accept?
+        && acc_p.src == prom_p.src
+        && acc_p.msg.bal == prom_p.msg.vb.b
+        && acc_p.msg.val == prom_p.msg.vb.v)
+}
+
+/* If an Accept msg in network with src x, ballot b, then balval of acceptor x 
+* has has ballot >= b */
+predicate AcceptMsgImpliesAccepted(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall p | 
+        && p in ds.network.sentPackets 
+        && p.msg.Accept?
+        && c.ValidAccIdx(p.src.idx) 
+    ::
+        BalLtEq(p.msg.bal, ds.acceptors[p.src.idx].accepted.b)
+}
+
+/* If an acceptor has currently accepted ballot b, then there must be an Accept message in the network
+* from that acceptor */
+predicate AcceptedImpliesAcceptMessage(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall idx | 
+        && c.ValidAccIdx(idx) 
+        && ds.acceptors[idx].accepted.b != Bottom
+    :: (
+    exists p ::
+        && p in ds.network.sentPackets 
+        && p.msg.Accept?
+        && p.msg.bal == ds.acceptors[idx].accepted.b
+        && p.msg.val == ds.acceptors[idx].accepted.v
+        && p.src == Id(Acc, idx)
+    )
+}
+
+/* For each Accept(b,v) message, there is a corresponding Propose message Propose(b,v) 
+* in the network */
+predicate AcceptMsgImpliesProposeMsg(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall acc_p | 
+        && acc_p in ds.network.sentPackets 
+        && acc_p.msg.Accept?
+    :: (
+    var b, v := acc_p.msg.bal, acc_p.msg.val;
+    var ldr := acc_p.dst;
+    var acc := acc_p.src;
+    exists prop_p :: 
+        && prop_p in ds.network.sentPackets
+        && prop_p.msg.Propose?
+        && prop_p.src == ldr
+        && prop_p.dst == acc
+        && prop_p.msg.bal == b
+        && prop_p.msg.val == v
+    )
+}
+
+
+/* For each Propose(v, b) message, there is a corresponding quorum of Promise packets 
+* in the network */
+predicate ProposeMsgImpliesQuorumOfPromise(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall prop_p | 
+        && prop_p in ds.network.sentPackets 
+        && prop_p.msg.Propose?
+    :: (
+    var b := prop_p.msg.bal;
+    var v := prop_p.msg.val;
+    exists qrm  :: 
+        && QuorumOfPromiseMsgs(c, ds, qrm, b)
+        && (|| PromiseWithHighestBallot(qrm).v == v
+            || PromiseWithHighestBallot(qrm).v == Nil
+        )
+    )
+}
+
 
 
 /* All l.accepts collected by l came from network */
@@ -70,7 +200,7 @@ predicate LdrAcceptsSetCorrespondToAcceptMsg(c:Constants, ds:DistrSys)
 {
     forall i | c.ValidLdrIdx(i) ::(
         forall s | s in ds.leaders[i].accepts
-        :: Packet(s, Id(Ldr, i), Accept(ds.leaders[i].ballot)) in ds.network.sentPackets
+        :: Packet(s, Id(Ldr, i), Accept(ds.leaders[i].ballot, ds.leaders[i].val)) in ds.network.sentPackets
     )
 }
 
@@ -98,7 +228,6 @@ predicate AccPromisedBallotLargerThanAccepted(c:Constants, ds:DistrSys)
 *       with ballot x such that b < x < b' 
 *   - the acceptor either has (v, b) accepted, or accepted some ballot >= b'
 */
-
 predicate PromisedImpliesNoMoreAccepts(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
     requires AllPacketsValid(c, ds) 
@@ -136,18 +265,7 @@ predicate AcceptMessageConstraint(c:Constants, ds:DistrSys, src:Id, p1_promised_
         || BalLtEq(p1_promised_bal, acc_p.msg.bal)
 }
 
-/* If an Accept msg in network with src x, ballot b, then balval of acceptor x 
-* has has ballot >= b */
-predicate AcceptMsgImpliesAccepted(c:Constants, ds:DistrSys) 
-    requires c.WF() && ds.WF(c)
-{
-    forall p | 
-        && p in ds.network.sentPackets 
-        && p.msg.Accept?
-        && c.ValidAccIdx(p.src.idx) 
-    ::
-        BalLtEq(p.msg.bal, ds.acceptors[p.src.idx].accepted.b)
-}
+
 
 predicate LdrBallotNotBottom(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
@@ -220,11 +338,11 @@ predicate QuorumHasSeenB(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot)
     exists p :: p in qrm && BalLtEq(b, p.msg.vb.b)
 }
 
-predicate LeaderHasQuorumOfAccepts(c:Constants, ds:DistrSys, i:int) 
-    requires c.WF() && ds.WF(c)
-    requires c.ValidLdrIdx(i)
-{
-    |ds.leaders[i].accepts| == c.f + 1
-}
+// predicate LeaderHasQuorumOfAccepts(c:Constants, ds:DistrSys, i:int) 
+//     requires c.WF() && ds.WF(c)
+//     requires c.ValidLdrIdx(i)
+// {
+//     |ds.leaders[i].accepts| == c.f + 1
+// }
 
 }

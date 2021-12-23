@@ -60,7 +60,7 @@ predicate MessageContainsV(m: Message, v:Value) {
         case Prepare(bal) => true
         case Promise(bal, vb) => vb.v != v ==> vb.v == Nil
         case Propose(bal, val) => val == v
-        case Accept(bal) =>  true
+        case Accept(bal, val) =>  true
         case Preempt(bal) => true
     }
 }

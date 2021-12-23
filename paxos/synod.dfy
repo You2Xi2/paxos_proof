@@ -27,6 +27,14 @@ datatype Constants = Constants(f:nat, ldr_ids:seq<Id>, ldr_vals:seq<Value>, acc_
         0<=i<|acc_ids|
     }
 
+    predicate ValidLdrId(id:Id) {
+        id.agt == Ldr && ValidLdrIdx(id.idx)
+    }
+
+    predicate ValidAccId(id:Id) {
+        id.agt == Acc && ValidAccIdx(id.idx)
+    }
+
     predicate ValidTypes() {
         && (forall l | l in ldr_ids :: l.agt.Ldr?)
         && (forall l | l in acc_ids :: l.agt.Acc?)
@@ -135,6 +143,17 @@ predicate ValidActor(c:Constants, actor:Id)
 *                                        Utils                                           *
 *****************************************************************************************/
 
+
+predicate Chosen(c:Constants, ds:DistrSys, b:Ballot, v:Value) 
+    requires c.WF() && ds.WF(c)
+    requires AllPacketsValid(c, ds)
+{
+    exists qrm :: 
+        && QuorumOfAcceptMsgs(c, ds, qrm, b) 
+        && forall p:Packet | p in qrm :: p.msg.val == v
+}
+
+
 predicate QuorumOfAcceptors(c:Constants, q:set<int>) 
     requires c.WF() 
 {
@@ -163,7 +182,7 @@ predicate QuorumOfPromiseMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballo
     && (forall p | p in qrm :: p in ds.network.sentPackets)
 }
 
-/* qrm is a quorum of accept messages with ballot b */
+/* qrm is a quorum of accept messages with ballot b, value v */
 predicate QuorumOfAcceptMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot) 
     requires c.WF()
 {
@@ -197,7 +216,7 @@ predicate ValidPacketSourceDest(c:Constants, ds:DistrSys, p:Packet)
         case Propose(b, v) => 
             && ValidLeaderSource(c, ds, p)
             && ValidAcceptorDest(c, ds ,p)
-        case Accept(b) => 
+        case Accept(b, v) => 
             && ValidAcceptorSource(c, ds, p)
             && ValidLeaderDest(c, ds, p)
         case Preempt(b) => 

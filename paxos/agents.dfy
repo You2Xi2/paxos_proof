@@ -74,7 +74,7 @@ predicate AcceptorAccept(a:Acceptor, a':Acceptor, recvIo:Packet, sendIos:seq<Pac
     && |sendIos| == 1
     && sendIos[0].src == a.consts.id
     && sendIos[0].dst == recvIo.src
-    && sendIos[0].msg == Accept(recvIo.msg.bal)
+    && sendIos[0].msg == Accept(recvIo.msg.bal, recvIo.msg.val)
 }
 
 /* Acceptor send Preempt */
@@ -159,7 +159,7 @@ predicate LeaderNext_P1b(l:Leader, l':Leader, recvIos:seq<Packet>, sendIos:seq<P
         case Prepare(bal) => LeaderStutter(l, l', sendIos)
         case Promise(bal, valbal) => LeaderProcessPromise(l, l', recvIos[0], sendIos)
         case Propose(bal, val) => LeaderStutter(l, l', sendIos)
-        case Accept(bal) =>  LeaderStutter(l, l', sendIos)
+        case Accept(bal, val) =>  LeaderStutter(l, l', sendIos)
         case Preempt(bal) => LeaderProcessPreempt(l, l', recvIos[0].msg, sendIos)
     }
 }
@@ -259,7 +259,7 @@ predicate LeaderNext_P2b(l:Leader, l':Leader, recvIos:seq<Packet>, sendIos:seq<P
         case Prepare(bal) => LeaderStutter(l, l', sendIos)
         case Promise(bal, valbal) => LeaderStutter(l, l', sendIos)
         case Propose(bal, val) => LeaderStutter(l, l', sendIos)
-        case Accept(bal) =>  LeaderProcessAccept(l, l', recvIos[0], sendIos)
+        case Accept(bal, val) =>  LeaderProcessAccept(l, l', recvIos[0], sendIos)
         case Preempt(bal) => LeaderProcessPreempt(l, l', recvIos[0].msg, sendIos)
     }
 }

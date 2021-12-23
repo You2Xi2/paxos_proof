@@ -61,6 +61,7 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
     ensures SomeLeaderHasDecided(c, ds')
     ensures Agreement_Inv(c, ds')
 {
+    NextPreservesTrivialities(c, ds, ds');
     var actor, recvIos, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
     if actor.agt == Ldr {
         NextPreservesAgreementInv_SomeoneHadDecided_LeaderAction(c, ds, ds', actor, recvIos, sendIos);
@@ -73,13 +74,13 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':
 lemma {:timeLimitMultiplier 2} NextPreservesAgreementInv_SomeoneHadDecided_AcceptorAction(c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
     requires Agreement_Inv(c, ds)
     requires Next(c, ds, ds')
+    requires ds'.WF(c) && Trivialities(c, ds')
     requires SomeLeaderHasDecided(c, ds)
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires actor.agt == Acc
     ensures SomeLeaderHasDecided(c, ds')
     ensures Agreement_Inv(c, ds')
 {
-    NextPreservesTrivialities(c, ds, ds');
     NextPreservesAgreementInv_SomeoneHadDecided_AcceptorAction_PromisedImpliesNoMoreAccepts(c, ds, ds', actor, recvIos, sendIos);
     
     // Prove Agreement_Inv_Decided properties
@@ -124,7 +125,7 @@ lemma {:timeLimitMultiplier 2} NextPreservesAgreementInv_SomeoneHadDecided_Accep
                     {
                         if |acc_set| >= c.f + 1 {
                             assert QuorumOfAcceptMsgs(c, ds', acc_set, b2);
-                            lemma_QuorumIntersection(c, ds', prom_qrm, b', acc_set, b2);
+                            var _ := lemma_QuorumIntersection(c, ds', prom_qrm, b', acc_set, b2);
                             assert false;
                         }
                     }
@@ -155,16 +156,42 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided_AcceptorAction_PromisedImplies
 lemma NextPreservesAgreementInv_SomeoneHadDecided_LeaderAction(c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
     requires Agreement_Inv(c, ds)
     requires Next(c, ds, ds')
+    requires ds'.WF(c) && Trivialities(c, ds')
     requires SomeLeaderHasDecided(c, ds)
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires actor.agt == Ldr
     ensures SomeLeaderHasDecided(c, ds')
     ensures Agreement_Inv(c, ds')
 {
-    NextPreservesTrivialities(c, ds, ds');
     var i1 :| c.ValidLdrIdx(i1) && LeaderHasDecided(c, ds, i1);
     var b1, v1 := ds.leaders[i1].ballot, ds.leaders[i1].val;
+
+    assert Agreement(c, ds');   // Needs proof
+
+
+
+
     assume false;
+    assert Trivialities(c, ds');
+    assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');
+    assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
+    assert AccPromisedBallotLargerThanAccepted(c, ds');
+    assert AcceptMsgImpliesAccepted(c, ds');
+    assert PromisedImpliesNoMoreAccepts(c, ds');
+
+    forall i | c.ValidLdrIdx(i) && LeaderHasDecided(c, ds', i) 
+    ensures Agreement_Inv_Decided(c, ds', i)
+    {
+        var b, v := ds'.leaders[i].ballot, ds'.leaders[i].val;
+        assert LargerBallotPhase2LeadersV(c, ds', v, b);
+        assert LargerBallotAcceptors(c, ds', v, b);     // Trivial
+        assert LargerBallotPromiseMsgs(c, ds', v, b);   // Trivial
+        assert LargerBallotProposeMsgs(c, ds', v, b);   // Trivial
+        assert LargerBallotsPromiseQrms(c, ds', b);
+        assert LeaderHasQuorumOfAccepts(c, ds', i);
+    }
+
+    assert Agreement_Inv(c, ds');
 }
 
 

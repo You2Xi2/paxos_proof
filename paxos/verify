@@ -1,13 +1,14 @@
-#!/bin/bash
+#!/bin/bash -li
 
-OUTDIR="sloc-metrics/"
+dafny="/usr/local/lib/dafny/dafny /timeLimit:20 /compile:0  /allowGlobals /noNLarith /autoTriggers:1"
+dafnylong="/usr/local/lib/dafny/dafny /timeLimit:40 /compile:0  /allowGlobals /noNLarith /autoTriggers:1"
 
 files=(`ls *.dfy`)
 
 for f in ${files[*]}
 do
     echo "Checking $f"
-    dafny /timeLimit:20 /compile:0 $f
+    $dafny $f
     echo ""
     echo ""
 done

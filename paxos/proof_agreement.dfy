@@ -148,21 +148,7 @@ lemma NextPreservesAgreementInv_SomeoneHadDecided_AcceptorAction_PromisedImplies
     requires actor.agt == Acc
     ensures SomeLeaderHasDecided(c, ds')
     ensures PromisedImpliesNoMoreAccepts(c, ds')
-{
-    forall prom_p | 
-        && prom_p in ds'.network.sentPackets 
-        && prom_p.msg.Promise?
-    ensures AcceptorConstraint(c, ds', prom_p.src, prom_p.msg.bal, prom_p.msg.vb.b)
-    {
-
-    }
-    forall prom_p | 
-        && prom_p in ds'.network.sentPackets 
-        && prom_p.msg.Promise?
-    ensures AcceptMessageConstraint(c, ds', prom_p.src, prom_p.msg.bal, prom_p.msg.vb.b)
-    {}
-    assert PromisedImpliesNoMoreAccepts(c, ds');
-}
+{}
 
 
 

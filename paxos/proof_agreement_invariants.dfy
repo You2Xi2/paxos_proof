@@ -98,6 +98,13 @@ predicate OneValuePerBallot(c:Constants, ds:DistrSys)
         :: 
         prop_p1.msg.val == prop_p2.msg.val
     )
+    && (forall b, acc_p1, acc_p2 | 
+        && acc_p1 in ds.network.sentPackets && acc_p2 in ds.network.sentPackets
+        && acc_p1.msg.Accept? && acc_p2.msg.Accept?
+        && acc_p1.msg.bal == b && acc_p2.msg.bal == b 
+        :: 
+        acc_p1.msg.val == acc_p1.msg.val
+    )
 }
 
 

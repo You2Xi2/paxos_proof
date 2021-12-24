@@ -150,7 +150,21 @@ predicate Chosen(c:Constants, ds:DistrSys, b:Ballot, v:Value)
 {
     exists qrm :: 
         && QuorumOfAcceptMsgs(c, ds, qrm, b) 
-        && forall p:Packet | p in qrm :: p.msg.val == v
+        && AccPacketsHaveValueV(qrm, v)
+}
+
+predicate AccPacketsHaveValueV(S:set<Packet>, v:Value) 
+    requires forall p | p in S :: p.msg.Accept?
+{   
+    forall p:Packet | p in S :: p.msg.val == v
+}
+
+
+predicate SomeValueChosen(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+    requires AllPacketsValid(c, ds)
+{
+    exists v, b :: Chosen(c, ds, b, v)
 }
 
 

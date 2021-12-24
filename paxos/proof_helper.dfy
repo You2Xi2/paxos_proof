@@ -48,7 +48,7 @@ import opened Proof_Agreement_Invs
 
 
 
-lemma {:timeLimitMultiplier 2} lemma_QuorumIntersection(c:Constants, ds:DistrSys, p1_qrm:set<Packet>, p1_bal:Ballot, p2_qrm:set<Packet>, p2_bal:Ballot)
+lemma lemma_QuorumIntersection(c:Constants, ds:DistrSys, p1_qrm:set<Packet>, p1_bal:Ballot, p2_qrm:set<Packet>, p2_bal:Ballot)
 returns (acc_id:Id)
     requires c.WF() && ds.WF(c)
     requires AllPacketsValid(c, ds)
@@ -75,7 +75,49 @@ returns (acc_id:Id)
 }
 
 
-function extractPacketSources(S:set<Packet>) : (res:set<Id>) 
+lemma lemma_Set_Intersection(S1:set<Id>, S2:set<Id>, U:set<Id>) returns (e:Id)
+    requires |S1| > |U|/2
+    requires |S2| > |U|/2
+    requires forall id | id in S1 :: id in U
+    requires forall id | id in S2 :: id in U
+    ensures e in U && e in S1 && e in S2
+{
+    // TODO: assume for now
+    assume false;
+}
+
+
+/* If no new Accept messages sent in this step, then no new (b, v)'s are chosen. */
+lemma lemma_NoNewAcceptsImpliesNoNewChosen(
+c:Constants, ds:DistrSys, ds':DistrSys)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires Next(c, ds, ds')
+    requires forall p:Packet | p in ds'.network.sentPackets && p.msg.Accept? :: p in ds.network.sentPackets
+    ensures forall b, v | Chosen(c, ds', b, v) :: Chosen(c, ds, b, v) 
+{
+    forall v, b | Chosen(c, ds', b, v)
+    ensures Chosen(c, ds, b, v) 
+    {
+        if !Chosen(c, ds, b, v) {
+            var qrm :| && QuorumOfAcceptMsgs(c, ds', qrm, b)
+                        && AccPacketsHaveValueV(qrm, v);
+            assert QuorumOfAcceptMsgs(c, ds, qrm, b);
+            assert Chosen(c, ds, b, v);
+            assert false;
+        }
+    }
+}
+
+
+
+/*****************************************************************************************
+*                                        Utils                                           *
+*****************************************************************************************/
+
+
+
+
+function {:opaque} extractPacketSources(S:set<Packet>) : (res:set<Id>) 
     decreases S
     ensures forall id | id in res :: (exists p :: p in S && p.src == id)
     ensures forall p | p in S :: p.src in res
@@ -88,7 +130,7 @@ function extractPacketSources(S:set<Packet>) : (res:set<Id>)
 }
 
 
-function setFromSeq(a:seq<Id>) : (res:set<Id>) 
+function {:opaque} setFromSeq(a:seq<Id>) : (res:set<Id>) 
     decreases a
     ensures forall i | 0 <= i < |a| :: a[i] in res
     ensures forall id | id in res :: (exists i :: 0 <= i < |a| && a[i] == id)
@@ -98,17 +140,4 @@ function setFromSeq(a:seq<Id>) : (res:set<Id>)
     else 
         {a[0]} + setFromSeq(a[1..])
 }
-
-
-lemma lemma_Set_Intersection(S1:set<Id>, S2:set<Id>, U:set<Id>) returns (e:Id)
-    requires |S1| > |U|/2
-    requires |S2| > |U|/2
-    requires forall id | id in S1 :: id in U
-    requires forall id | id in S2 :: id in U
-    ensures e in U && e in S1 && e in S2
-{
-    // TODO: assume for now
-    assume false;
-}
-
 }

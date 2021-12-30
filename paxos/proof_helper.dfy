@@ -159,6 +159,21 @@ lemma lemma_ChosenImpliesProposeMsg(c:Constants, ds:DistrSys, b:Ballot, v:Value)
 }
 
 
+/* If a new value is chosen in this step, then this step must be an AcceptorAccept step */
+lemma lemma_NewChosenImpliesAcceptStep(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
+    requires c.WF() && ds.WF(c) && ds'.WF(c)
+    requires AllPacketsValid(c, ds) && AllPacketsValid(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires !Chosen(c, ds, b, v)
+    requires Chosen(c, ds', b, v)
+    ensures recvIos[0].msg.Propose?
+    ensures AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos)   
+{}
+
+
 lemma lemma_HighestPromiseValNilImpliesAllBottom(pset:set<Packet>) 
     requires |pset| > 0
     requires forall p | p in pset && p.msg.Promise? :: p.msg.vb.v == Nil <==> p.msg.vb.b == Bottom

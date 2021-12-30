@@ -94,7 +94,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires actor.agt == Acc
+    requires c.ValidAccId(actor)
     requires !SomeValueChosen(c, ds)
     ensures Agreement_Chosen_Inv(c, ds')
 {
@@ -121,6 +121,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     forall b, v | Chosen(c, ds', b, v) 
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
     {
+        lemma_NewChosenImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, b, v);
         AgreementChosenInv_NoneChosen_AccAction_NewChosenV(c, ds, ds', actor, recvIos, sendIos, b, v);
     }
     assert Agreement_Chosen_Inv(c, ds');
@@ -134,7 +135,9 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Agreement_Chosen_Inv_Common(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires actor.agt == Acc
+    requires c.ValidAccId(actor)
+    requires recvIos[0].msg.Propose?
+    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
     requires !SomeValueChosen(c, ds)
     requires Chosen(c, ds', b, v)
     requires OneValuePerBallot(c, ds');
@@ -163,13 +166,20 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Agreement_Chosen_Inv_Common(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires actor.agt == Acc
+    requires c.ValidAccId(actor)
+    requires recvIos[0].msg.Propose?
+    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
     requires !SomeValueChosen(c, ds)
     requires Chosen(c, ds', b, v)
     requires OneValuePerBallot(c, ds');
     ensures LargerBallotPromiseMsgs(c, ds', b, v)
 {
     assume false;
+    forall p | isPromisePkt(ds', p) && BalLtEq(b, p.msg.vb.b)
+    ensures p.msg.vb.v == v 
+    {
+
+    }
 }
 
 
@@ -180,7 +190,9 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Agreement_Chosen_Inv_Common(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires actor.agt == Acc
+    requires c.ValidAccId(actor)
+    requires recvIos[0].msg.Propose?
+    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
     requires !SomeValueChosen(c, ds)
     requires Chosen(c, ds', b, v)
     requires OneValuePerBallot(c, ds')
@@ -237,45 +249,29 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires !SomeValueChosen(c, ds)
     ensures Agreement_Chosen(c, ds')
 {
-    // At most one value can be chosen in ds'.
-    if recvIos[0].msg.Propose? {
+    if SomeValueChosen(c, ds') {
+        var v, b :| Chosen(c, ds', b, v);
+        lemma_NewChosenImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, b, v);
         var a, a' := ds.acceptors[actor.idx], ds'.acceptors[actor.idx];
-        if BalLtEq(a.promised, recvIos[0].msg.bal) {
-            assert AcceptorAccept(a, a', recvIos[0], sendIos);
-            var b, v := recvIos[0].msg.bal, recvIos[0].msg.val;
-            forall b', v' | Chosen(c, ds', b', v') 
-            ensures b' == b && v' == v
-            {
-                if !(b' == b && v' == v) {
-                    var qrm' :| && QuorumOfAcceptMsgs(c, ds', qrm', b') 
-                                && AccPacketsHaveValueV(qrm', v');
-                    forall p | p in qrm' 
-                    ensures p in ds.network.sentPackets
-                    {
-                        if p !in ds.network.sentPackets{
-                            lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
-                            lemma_SingleElemList(sendIos, sendIos[0]);
-                            assert false;
-                        }
+        assert AcceptorAccept(a, a', recvIos[0], sendIos);
+        forall b', v' | Chosen(c, ds', b', v') 
+        ensures b' == b && v' == v
+        {
+            if !(b' == b && v' == v) {
+                var qrm' :| && QuorumOfAcceptMsgs(c, ds', qrm', b') 
+                            && AccPacketsHaveValueV(qrm', v');
+                forall p | p in qrm' 
+                ensures p in ds.network.sentPackets
+                {
+                    if p !in ds.network.sentPackets{
+                        lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
+                        lemma_SingleElemList(sendIos, sendIos[0]);
+                        assert false;
                     }
-                    assert Chosen(c, ds, b', v');
-                    assert false;
                 }
-            }
-        } else {
-            lemma_SingleElemList(sendIos, sendIos[0]);
-            lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
-            if exists b, v :: Chosen(c, ds', b, v) { 
-                lemma_NoNewAcceptsImpliesNoNewChosen(c, ds, ds');
+                assert Chosen(c, ds, b', v');
                 assert false;
             }
-        }
-    } else {
-        // No new Accept packets generated in this step, so nothing is chosen in ds'
-        assert forall p:Packet | isAcceptPkt(ds', p) :: p in ds.network.sentPackets;
-        if exists b, v :: Chosen(c, ds', b, v) { 
-            lemma_NoNewAcceptsImpliesNoNewChosen(c, ds, ds');
-            assert false;
         }
     }
 }

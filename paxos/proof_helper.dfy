@@ -143,11 +143,22 @@ lemma lemma_ChosenImpliesProposeMsg(c:Constants, ds:DistrSys, b:Ballot, v:Value)
 
 lemma lemma_HighestPromiseValNilImpliesAllBottom(pset:set<Packet>) 
     requires |pset| > 0
+    requires forall p | p in pset && p.msg.Promise? :: p.msg.vb.v == Nil <==> p.msg.vb.b == Bottom
     ensures PromiseWithHighestBallot(pset).v == Nil ==> 
     (forall p | p in pset && p.msg.Promise? :: p.msg.vb.b == Bottom)
 {
-    // TODO
-    assume false;
+    if PromiseWithHighestBallot(pset).v == Nil {
+        forall p | p in pset && p.msg.Promise? 
+        ensures p.msg.vb.b == Bottom
+        {
+            if p.msg.vb.b != Bottom {
+                assert BalGt(Bottom, p.msg.vb.b);
+                assert PromiseWithHighestBallot(pset).b != Bottom;
+                assert PromiseWithHighestBallot(pset).v != Nil;
+                assert false;
+            }
+        }
+    }
 }
 
 lemma lemma_PromiseWithHighestBallotProperty(pset:set<Packet>, p:Packet, v:Value)

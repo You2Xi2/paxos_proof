@@ -119,8 +119,9 @@ lemma lemma_NewPacketsComeFromSendIos(
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     ensures forall p | p in ds'.network.sentPackets && p !in ds.network.sentPackets :: p in sendIos
 {
-    // TODO
-    assume false;
+    var e, e' := ds.network, ds'.network;
+    var sendSet := set s | s in sendIos;
+    assert forall p | p in e'.sentPackets && p !in e.sentPackets :: p in sendSet;
 }
 
 

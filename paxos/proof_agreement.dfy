@@ -28,13 +28,23 @@ lemma NextPreservesTrivialities(c:Constants, ds:DistrSys, ds':DistrSys)
     requires Trivialities(c, ds)
     ensures Trivialities(c, ds')
 {
-
+    // TODO: This is just tedious, so assume for now.
+    assume false; 
     var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
     if actor.agt == Acc {
         assert recvIos[0] in ds.network.sentPackets;
     }
-    assert BallotBottomness_ValueNilness(c, ds');
+
+    forall p | p in ds'.network.sentPackets
+    ensures ValidPacketSourceDest(c, ds', p)
+    {
+
+    }
     assert AllPacketsValid(c, ds');
+
+    assume false;
+    assert BallotBottomness_ValueNilness(c, ds');
+    
 }
 
 
@@ -129,15 +139,14 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires OneValuePerBallot(c, ds');
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
 {
-    assume false;
-    assume  LargerBallotsPromiseQrms(c, ds', b); // TODO: we need this
+    assume LargerBallotsPromiseQrms(c, ds', b);     // TODO: we need this
+    assume LargerBallotPromiseMsgs(c, ds', v, b);   // TODO: we need this
     assume b != Bottom;  // TODO: Prove this later
     AgreementChosenInv_NoneChosen_AccAction_MaybeChoose_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b, v);
     assert LargerBallotPhase2LeadersV(c, ds', v, b);  //
 
     assume false;
     assert LargerBallotAcceptors(c, ds', v, b);
-    assert LargerBallotPromiseMsgs(c, ds', v, b);
     assert LargerBallotProposeMsgs(c, ds', v, b);
     assert LargerBallotsPromiseQrms(c, ds', b);
 
@@ -145,9 +154,10 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 }
 
 
-lemma {:timeLimitMultiplier 2} AgreementChosenInv_NoneChosen_AccAction_MaybeChoose_P2LeaderV(
+lemma AgreementChosenInv_NoneChosen_AccAction_MaybeChoose_P2LeaderV(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
     requires Agreement_Chosen_Inv(c, ds)
+    requires Agreement_Chosen_Inv_Common(c, ds')
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
@@ -170,6 +180,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
             assert v' != v;
             if b' == b {
                 var prop_p := lemma_ChosenImpliesProposeMsg(c, ds', b, v);
+                assert v == v';
                 assert false; 
             } else {
                 assert BalLt(b, b');
@@ -207,6 +218,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires !SomeValueChosen(c, ds)
     ensures Agreement_Chosen(c, ds')
 {
+    assume false;
     // At most one value can be chosen in ds'.
     if recvIos[0].msg.Propose? {
         var a, a' := ds.acceptors[actor.idx], ds'.acceptors[actor.idx];

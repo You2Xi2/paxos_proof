@@ -125,7 +125,9 @@ lemma lemma_ChosenImpliesPromiseQrm(c:Constants, ds:DistrSys, b:Ballot, v:Value)
 
 /* If (b,v) is chosen, then is must have been proposed */
 lemma lemma_ChosenImpliesProposeMsg(c:Constants, ds:DistrSys, b:Ballot, v:Value) returns (prop:Packet)
-    requires Agreement_Chosen_Inv(c, ds)
+    requires c.WF() && ds.WF(c)
+    requires AllPacketsValid(c, ds)
+    requires Agreement_Chosen_Inv_Common(c, ds)
     requires Chosen(c, ds, b, v) 
     ensures prop in ds.network.sentPackets && prop.msg.Propose? 
     ensures prop.msg.val == v && prop.msg.bal == b

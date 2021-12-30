@@ -46,7 +46,18 @@ predicate Agreement_Chosen_Inv(c:Constants, ds:DistrSys)
     && c.WF()
     && ds.WF(c)
     && Trivialities(c, ds)
-    
+    && Agreement_Chosen_Inv_Common(c, ds)
+    // Chosen
+    && (forall b, v | Chosen(c, ds, b, v) 
+        :: Agreement_Chosen_Inv_SomeValChosen(c, ds, b, v)
+    )
+}
+
+/* Things that are always true */
+predicate Agreement_Chosen_Inv_Common(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+    requires AllPacketsValid(c, ds)
+{
     && Agreement_Chosen(c, ds)
     && OneValuePerBallot(c, ds)
 
@@ -65,11 +76,6 @@ predicate Agreement_Chosen_Inv(c:Constants, ds:DistrSys)
     && LeaderP2ImpliesQuorumOfPromise(c, ds)
     && ProposeMsgImpliesQuorumOfPromise(c, ds)
     && PromisedImpliesNoMoreAccepts(c, ds)
-
-    // Chosen
-    && (forall b, v | Chosen(c, ds, b, v) 
-        :: Agreement_Chosen_Inv_SomeValChosen(c, ds, b, v)
-    )
 }
 
 

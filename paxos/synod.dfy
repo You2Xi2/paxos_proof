@@ -191,9 +191,10 @@ predicate QuorumOfPromiseMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballo
     && |qrm| >= c.f + 1
     && UniqueSources(qrm)
     // && SameDest(qrm)
-    && (forall p | p in qrm :: p.msg.Promise?)
-    && (forall p | p in qrm :: p.msg.bal == b)
-    && (forall p | p in qrm :: p in ds.network.sentPackets)
+    && (forall p | p in qrm :: 
+            && isPromisePkt(ds, p)
+            && p.msg.bal == b
+    )
 }
 
 /* qrm is a quorum of accept messages with ballot b, value v */
@@ -203,8 +204,10 @@ predicate QuorumOfAcceptMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot
     && |qrm| >= c.f + 1
     && UniqueSources(qrm)
     // && SameDest(qrm)
-    && (forall p | p in qrm :: isAcceptPkt(ds, p))
-    && (forall p | p in qrm :: p.msg.bal == b)
+    && (forall p | p in qrm :: 
+            && isAcceptPkt(ds, p)
+            && p.msg.bal == b
+    )
 }
 
 

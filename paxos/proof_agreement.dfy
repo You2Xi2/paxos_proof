@@ -131,6 +131,7 @@ lemma AgreementChosenInv_NoneChosen_AccAction_MaybeChoose(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
     requires Agreement_Chosen_Inv(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_Common(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires actor.agt == Acc
@@ -157,8 +158,8 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 lemma AgreementChosenInv_NoneChosen_AccAction_MaybeChoose_P2LeaderV(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
     requires Agreement_Chosen_Inv(c, ds)
-    requires Agreement_Chosen_Inv_Common(c, ds')
     requires ds'.WF(c) && Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_Common(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires actor.agt == Acc
@@ -196,7 +197,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
                     assert pivot.msg.vb.v == v;
                     forall p:Packet | p in qrm' && BalLtEq(pivot.msg.vb.b, p.msg.vb.b) 
                     ensures p.msg.vb.v == v {
-                        lemma_BalLtEqTransitivity(b, pivot.msg.vb.b, p.msg.bal);
+                        lemma_BalLtEqTransitivity(b, pivot.msg.vb.b, p.msg.vb.b);
                     }
                     lemma_PromiseWithHighestBallotProperty(qrm', pivot, v);
                     assert PromiseWithHighestBallot(qrm').v == v;

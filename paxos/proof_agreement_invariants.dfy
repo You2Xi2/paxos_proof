@@ -383,7 +383,7 @@ predicate LargerBallotAcceptors(c:Constants, ds:DistrSys, v:Value, b:Ballot)
 predicate LargerBallotPromiseMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
     requires c.WF() && ds.WF(c)
 {
-    forall p | p in ds.network.sentPackets && p.msg.Promise? && BalLtEq(b, p.msg.vb.b)
+    forall p | isPromisePkt(ds, p) && BalLtEq(b, p.msg.vb.b)
     :: p.msg.vb.v == v
 }
 

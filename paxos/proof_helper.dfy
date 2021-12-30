@@ -167,10 +167,7 @@ lemma lemma_PromiseWithHighestBallotProperty(pset:set<Packet>, p:Packet, v:Value
     requires p in pset;
     requires forall p' | p' in pset && p'.msg.Promise? && BalLtEq(p.msg.vb.b, p'.msg.vb.b) :: p'.msg.vb.v == v
     ensures PromiseWithHighestBallot(pset).v == v
-{
-    // TODO
-    assume false;
-}
+{}
 
 lemma lemma_BalLtEqTransitivity(b1:Ballot, b2:Ballot, b3:Ballot) 
     requires BalLtEq(b1, b2)

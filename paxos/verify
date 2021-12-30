@@ -3,15 +3,29 @@
 dafny="/usr/local/lib/dafny/dafny /timeLimit:20 /compile:0  /allowGlobals /noNLarith /autoTriggers:1"
 dafnylong="/usr/local/lib/dafny/dafny /timeLimit:40 /compile:0  /allowGlobals /noNLarith /autoTriggers:1"
 
-files=(`ls *.dfy`)
 
-for f in ${files[*]}
-do
-    echo "Checking $f"
-    $dafny $f
-    echo ""
-    echo ""
-done
+### Definition Files 
+echo ""
+echo "Verifying all definition files"
+$dafny types.dfy agents.dfy network.dfy synod.dfy
+
+
+### Proof Files
+echo ""
+echo "Verifying proof_validity.dfy"
+$dafny proof_validity.dfy
+
+echo ""
+echo "Verifying proof_agreement_invariants.dfy"
+$dafny proof_agreement_invariants.dfy
+
+echo ""
+echo "Verifying proof_helper.dfy"
+$dafny proof_helper.dfy
+
+echo ""
+echo "Verifying proof_agreement.dfy"
+$dafny proof_agreement.dfy
 
 echo "Done"
 

@@ -203,9 +203,8 @@ predicate QuorumOfAcceptMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot
     && |qrm| >= c.f + 1
     && UniqueSources(qrm)
     // && SameDest(qrm)
-    && (forall p | p in qrm :: p.msg.Accept?)
+    && (forall p | p in qrm :: isAcceptPkt(ds, p))
     && (forall p | p in qrm :: p.msg.bal == b)
-    && (forall p | p in qrm :: p in ds.network.sentPackets)
 }
 
 
@@ -323,6 +322,26 @@ predicate SomeLeaderHasDecided(c:Constants, ds:DistrSys)
     requires c.WF() && ds.WF(c)
 {
     exists i :: c.ValidLdrIdx(i) && LeaderHasDecided(c, ds, i)
+}
+
+predicate isPreparePkt(ds:DistrSys, p:Packet)
+{
+    p in ds.network.sentPackets && p.msg.Prepare?
+}
+
+predicate isPromisePkt(ds:DistrSys, p:Packet)
+{
+    p in ds.network.sentPackets && p.msg.Promise?
+}
+
+predicate isAcceptPkt(ds:DistrSys, p:Packet)
+{
+    p in ds.network.sentPackets && p.msg.Accept?
+}
+
+predicate isProposePkt(ds:DistrSys, p:Packet)
+{
+    p in ds.network.sentPackets && p.msg.Propose?
 }
 
 }

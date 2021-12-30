@@ -35,7 +35,7 @@ predicate Agreement_Chosen(c:Constants, ds:DistrSys)
 predicate Trivialities(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    && LdrBallotNotBottom(c, ds)
+    && BallotBottomness_ValueNilness(c, ds)
     && AllPacketsValid(c, ds)
 }
 
@@ -137,8 +137,6 @@ predicate OneValuePerBallot_ProposeMsgAndLeader(c:Constants, ds:DistrSys)
         :: 
         prop.msg.val == ds.leaders[l_idx].val
 }
-
-
 
 
 /* For each promise message p, if it contains an accepted (v, b), then there is an 
@@ -325,10 +323,29 @@ predicate AcceptMessageConstraint(c:Constants, ds:DistrSys, src:Id, p1_promised_
 
 
 
-predicate LdrBallotNotBottom(c:Constants, ds:DistrSys) 
+predicate BallotBottomness_ValueNilness(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    && (forall l | l in ds.leaders :: l.ballot != Bottom)
+    && BallotBottomness_ValueNilness_Packets(c, ds)
+    && BallotBottomness_ValueNilness_Agents(c, ds)
+}
+
+predicate BallotBottomness_ValueNilness_Packets(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall p ::
+    if isPreparePkt(ds, p) then p.msg.bal != Bottom
+    else if isPromisePkt(ds, p) then p.msg.vb.v == Nil <==> p.msg.vb.b == Bottom
+    else if isAcceptPkt(ds, p) then p.msg.val != Nil && p.msg.bal != Bottom
+    else if isProposePkt(ds, p) then p.msg.val != Nil && p.msg.bal != Bottom
+    else true
+}
+
+predicate BallotBottomness_ValueNilness_Agents(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    && (forall l | l in ds.leaders :: l.ballot != Bottom && l.val != Nil)
+    && (forall a | a in ds.acceptors :: a.accepted.b == Bottom <==> a.accepted.v == Nil)
 }
 
 

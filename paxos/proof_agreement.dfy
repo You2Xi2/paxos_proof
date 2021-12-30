@@ -33,6 +33,8 @@ lemma NextPreservesTrivialities(c:Constants, ds:DistrSys, ds':DistrSys)
     if actor.agt == Acc {
         assert recvIos[0] in ds.network.sentPackets;
     }
+    assert BallotBottomness_ValueNilness(c, ds');
+    assert AllPacketsValid(c, ds');
 }
 
 

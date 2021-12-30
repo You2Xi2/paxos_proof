@@ -91,16 +91,19 @@ lemma lemma_Set_Intersection(S1:set<Id>, S2:set<Id>, U:set<Id>) returns (e:Id)
 lemma lemma_NoNewAcceptsImpliesNoNewChosen(
 c:Constants, ds:DistrSys, ds':DistrSys)
     requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
-    requires forall p:Packet | p in ds'.network.sentPackets && p.msg.Accept? :: p in ds.network.sentPackets
+    requires forall p:Packet | isAcceptPkt(ds', p) :: p in ds.network.sentPackets
     ensures forall b, v | Chosen(c, ds', b, v) :: Chosen(c, ds, b, v) 
 {
     forall v, b | Chosen(c, ds', b, v)
     ensures Chosen(c, ds, b, v) 
     {
         if !Chosen(c, ds, b, v) {
+            
             var qrm :| && QuorumOfAcceptMsgs(c, ds', qrm, b)
-                        && AccPacketsHaveValueV(qrm, v);
+                       && AccPacketsHaveValueV(qrm, v);
+            assert forall p | p in qrm :: p in ds.network.sentPackets;
             assert QuorumOfAcceptMsgs(c, ds, qrm, b);
             assert Chosen(c, ds, b, v);
             assert false;

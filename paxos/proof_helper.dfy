@@ -112,6 +112,18 @@ c:Constants, ds:DistrSys, ds':DistrSys)
 }
 
 
+/* All new packets are spawned in sendIos */
+lemma lemma_NewPacketsComeFromSendIos(
+    c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    ensures forall p | p in ds'.network.sentPackets && p !in ds.network.sentPackets :: p in sendIos
+{
+    // TODO
+    assume false;
+}
+
+
 /* If (b,v) is chosen, then there must be a quorum of Promise for b */
 lemma lemma_ChosenImpliesPromiseQrm(c:Constants, ds:DistrSys, b:Ballot, v:Value) returns (qrm:set<Packet>)
     requires Agreement_Chosen_Inv(c, ds)
@@ -179,6 +191,16 @@ lemma lemma_BalLtEqTransitivity(b1:Ballot, b2:Ballot, b3:Ballot)
     requires BalLtEq(b2, b3)
     ensures BalLtEq(b1, b3)
 {}
+
+
+lemma lemma_SingleElemList<T>(s:seq<T>, e:T) 
+    requires |s| == 1;
+    requires e == s[0]
+    ensures forall e' | e' in s :: e' == e
+{
+    // This is axiomatic
+    assume false;
+}
 
 
 

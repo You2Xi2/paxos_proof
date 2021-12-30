@@ -219,22 +219,34 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires !SomeValueChosen(c, ds)
     ensures Agreement_Chosen(c, ds')
 {
-    assume false;
     // At most one value can be chosen in ds'.
     if recvIos[0].msg.Propose? {
         var a, a' := ds.acceptors[actor.idx], ds'.acceptors[actor.idx];
         if BalLtEq(a.promised, recvIos[0].msg.bal) {
+            assert AcceptorAccept(a, a', recvIos[0], sendIos);
             var b, v := recvIos[0].msg.bal, recvIos[0].msg.val;
             forall b', v' | Chosen(c, ds', b', v') 
             ensures b' == b && v' == v
             {
                 if !(b' == b && v' == v) {
+                    var qrm' :| && QuorumOfAcceptMsgs(c, ds', qrm', b') 
+                                && AccPacketsHaveValueV(qrm', v');
+                    forall p | p in qrm' 
+                    ensures p in ds.network.sentPackets
+                    {
+                        if p !in ds.network.sentPackets{
+                            lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
+                            lemma_SingleElemList(sendIos, sendIos[0]);
+                            assert false;
+                        }
+                    }
                     assert Chosen(c, ds, b', v');
                     assert false;
                 }
             }
         } else {
-            assert forall p:Packet | p in ds'.network.sentPackets && p.msg.Accept? :: p in ds.network.sentPackets;
+            lemma_SingleElemList(sendIos, sendIos[0]);
+            lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
             if exists b, v :: Chosen(c, ds', b, v) { 
                 lemma_NoNewAcceptsImpliesNoNewChosen(c, ds, ds');
                 assert false;
@@ -242,7 +254,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
         }
     } else {
         // No new Accept packets generated in this step, so nothing is chosen in ds'
-        assert forall p:Packet | p in ds'.network.sentPackets && p.msg.Accept? :: p in ds.network.sentPackets;
+        assert forall p:Packet | isAcceptPkt(ds', p) :: p in ds.network.sentPackets;
         if exists b, v :: Chosen(c, ds', b, v) { 
             lemma_NoNewAcceptsImpliesNoNewChosen(c, ds, ds');
             assert false;

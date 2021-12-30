@@ -97,10 +97,8 @@ c:Constants, ds:DistrSys, ds':DistrSys)
     ensures forall b, v | Chosen(c, ds', b, v) :: Chosen(c, ds, b, v) 
 {
     forall v, b | Chosen(c, ds', b, v)
-    ensures Chosen(c, ds, b, v) 
-    {
+    ensures Chosen(c, ds, b, v) {
         if !Chosen(c, ds, b, v) {
-            
             var qrm :| && QuorumOfAcceptMsgs(c, ds', qrm, b)
                        && AccPacketsHaveValueV(qrm, v);
             assert forall p | p in qrm :: p in ds.network.sentPackets;

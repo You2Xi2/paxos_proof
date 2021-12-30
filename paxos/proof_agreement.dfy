@@ -174,11 +174,20 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires OneValuePerBallot(c, ds');
     ensures LargerBallotPromiseMsgs(c, ds', b, v)
 {
-    assume false;
     forall p | isPromisePkt(ds', p) && BalLtEq(b, p.msg.vb.b)
     ensures p.msg.vb.v == v 
     {
-
+        var b', v' := p.msg.vb.b, p.msg.vb.v;
+        lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
+        lemma_SingleElemList(sendIos, sendIos[0]);      
+        assert isPromisePkt(ds, p);
+        if b == b' {
+            assert v' == v;     // by OneValuePerBallot_PromiseMsg(c, ds)
+        } else {
+            // TODO
+            assert BalLt(b, b');
+            assume false;
+        }
     }
 }
 

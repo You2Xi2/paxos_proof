@@ -85,10 +85,10 @@ predicate Agreement_Chosen_Inv_SomeValChosen(c:Constants, ds:DistrSys, b:Ballot,
     requires AllPacketsValid(c, ds)
     requires Chosen(c, ds, b, v) 
 {
-    && LargerBallotPhase2LeadersV(c, ds, v, b)
-    && LargerBallotAcceptors(c, ds, v, b)
-    && LargerBallotPromiseMsgs(c, ds, v, b)
-    && LargerBallotProposeMsgs(c, ds, v, b)
+    && LargerBallotPhase2LeadersV(c, ds, b, v)
+    && LargerBallotAcceptors(c, ds, b, v)
+    && LargerBallotPromiseMsgs(c, ds, b, v)
+    && LargerBallotProposeMsgs(c, ds, b, v)
     && LargerBallotsPromiseQrms(c, ds, b)
 }
 
@@ -98,6 +98,7 @@ predicate OneValuePerBallot(c:Constants, ds:DistrSys)
     requires c.WF() && ds.WF(c)
 {
     && OneValuePerBallot_Leaders(c, ds)
+    && OneValuePerBallot_PromiseMsg(c, ds)
     && OneValuePerBallot_ProposeMsg(c, ds)
     && OneValuePerBallot_AcceptMsg(c, ds)
     && OneValuePerBallot_ProposeMsgAndLeader(c, ds)
@@ -106,17 +107,27 @@ predicate OneValuePerBallot(c:Constants, ds:DistrSys)
 predicate OneValuePerBallot_Leaders(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    forall l1, l2 | c.ValidLdrIdx(l1) && c.ValidLdrIdx(l2) && l1!=l2 :: ds.leaders[l1].ballot != ds.leaders[l2].ballot
+    forall l1, l2 | c.ValidLdrIdx(l1) && c.ValidLdrIdx(l2) && l1!=l2 
+    :: ds.leaders[l1].ballot != ds.leaders[l2].ballot
+}
+
+predicate OneValuePerBallot_PromiseMsg(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall prom_p1, prom_p2 | 
+        && isPromisePkt(ds, prom_p1) && isPromisePkt(ds, prom_p2) 
+        && prom_p1.msg.vb.b == prom_p2.msg.vb.b
+    :: 
+        prom_p1.msg.vb.v == prom_p2.msg.vb.v
 }
 
 predicate OneValuePerBallot_ProposeMsg(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
     forall prop_p1, prop_p2 | 
-        && prop_p1 in ds.network.sentPackets && prop_p2 in ds.network.sentPackets
-        && prop_p1.msg.Propose? && prop_p2.msg.Propose?
+        && isProposePkt(ds, prop_p1) && isProposePkt(ds, prop_p2)
         && prop_p1.msg.bal == prop_p2.msg.bal
-        :: 
+    :: 
         prop_p1.msg.val == prop_p2.msg.val
 }
 
@@ -124,10 +135,9 @@ predicate OneValuePerBallot_AcceptMsg(c:Constants, ds:DistrSys)
     requires c.WF() && ds.WF(c)
 {
     forall acc_p1, acc_p2 | 
-        && acc_p1 in ds.network.sentPackets && acc_p2 in ds.network.sentPackets
-        && acc_p1.msg.Accept? && acc_p2.msg.Accept?
+        && isAcceptPkt(ds, acc_p1) && isAcceptPkt(ds, acc_p2)
         && acc_p1.msg.bal == acc_p2.msg.bal
-        :: 
+    :: 
         acc_p1.msg.val == acc_p1.msg.val
 }
 
@@ -137,10 +147,9 @@ predicate OneValuePerBallot_ProposeMsgAndLeader(c:Constants, ds:DistrSys)
     forall l_idx, prop | 
         && c.ValidLdrIdx(l_idx)
         && LeaderInPhase2(c, ds, l_idx) 
-        && prop in ds.network.sentPackets
-        && prop.msg.Propose?
+        && isProposePkt(ds, prop)
         && prop.msg.bal == ds.leaders[l_idx].ballot
-        :: 
+    :: 
         prop.msg.val == ds.leaders[l_idx].val
 }
 
@@ -358,7 +367,7 @@ predicate BallotBottomness_ValueNilness_Agents(c:Constants, ds:DistrSys)
 
 /* If v is chosen with ballot b, then all phase 2 leaders with ballots
 * b' >= b must be of v */
-predicate LargerBallotPhase2LeadersV(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+predicate LargerBallotPhase2LeadersV(c:Constants, ds:DistrSys, b:Ballot, v:Value) 
     requires c.WF() && ds.WF(c)
 {
     forall i' | 
@@ -370,7 +379,7 @@ predicate LargerBallotPhase2LeadersV(c:Constants, ds:DistrSys, v:Value, b:Ballot
 
 /* If v is chosen with ballot b, then for any acceptor that accepted a ballot b'>=b, 
 * the accepted value is v */
-predicate LargerBallotAcceptors(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+predicate LargerBallotAcceptors(c:Constants, ds:DistrSys, b:Ballot, v:Value) 
     requires c.WF() && ds.WF(c)
 {
     forall i' | c.ValidAccIdx(i') && BalLtEq(b, ds.acceptors[i'].accepted.b)
@@ -380,7 +389,7 @@ predicate LargerBallotAcceptors(c:Constants, ds:DistrSys, v:Value, b:Ballot)
 
 /* If v is chosen with ballot b, then for any Promise msgs with valbal ballot b'>=b, 
 * the valbal value is v */
-predicate LargerBallotPromiseMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+predicate LargerBallotPromiseMsgs(c:Constants, ds:DistrSys, b:Ballot, v:Value) 
     requires c.WF() && ds.WF(c)
 {
     forall p | isPromisePkt(ds, p) && BalLtEq(b, p.msg.vb.b)
@@ -389,7 +398,7 @@ predicate LargerBallotPromiseMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot)
 
 /* If v is chosen with ballot b, then for any Propose msgs with ballot b'>=b, 
 * the value is v */
-predicate LargerBallotProposeMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
+predicate LargerBallotProposeMsgs(c:Constants, ds:DistrSys, b:Ballot, v:Value) 
     requires c.WF() && ds.WF(c)
 {
     forall p | p in ds.network.sentPackets && p.msg.Propose? && BalLtEq(b, p.msg.bal)

@@ -99,7 +99,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     ensures Agreement_Chosen_Inv(c, ds')
 {
     AgreementChosenInv_NoneChosen_AccAction_AgreementChosen(c, ds, ds', actor, recvIos, sendIos);
-    assert OneValuePerBallot(c, ds');
+    assume OneValuePerBallot(c, ds');
 
     // Leader state
     assume LdrAcceptsSetCorrespondToAcceptMsg(c, ds');      // TODO
@@ -121,13 +121,13 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     forall b, v | Chosen(c, ds', b, v) 
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
     {
-        AgreementChosenInv_NoneChosen_AccAction_MaybeChoose(c, ds, ds', actor, recvIos, sendIos, b, v);
+        AgreementChosenInv_NoneChosen_AccAction_NewChosenV(c, ds, ds', actor, recvIos, sendIos, b, v);
     }
     assert Agreement_Chosen_Inv(c, ds');
 }
 
 
-lemma AgreementChosenInv_NoneChosen_AccAction_MaybeChoose(
+lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
     requires Agreement_Chosen_Inv(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
@@ -140,22 +140,40 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires OneValuePerBallot(c, ds');
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
 {
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
+    assert LargerBallotPromiseMsgs(c, ds', b, v);  
+
     assume LargerBallotsPromiseQrms(c, ds', b);     // TODO: we need this
-    assume LargerBallotPromiseMsgs(c, ds', v, b);   // TODO: we need this
-    assume b != Bottom;  // TODO: Prove this later
-    AgreementChosenInv_NoneChosen_AccAction_MaybeChoose_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b, v);
-    assert LargerBallotPhase2LeadersV(c, ds', v, b);  //
+
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b, v);
+    assert LargerBallotPhase2LeadersV(c, ds', b, v);  
 
     assume false;
-    assert LargerBallotAcceptors(c, ds', v, b);
-    assert LargerBallotProposeMsgs(c, ds', v, b);
-    assert LargerBallotsPromiseQrms(c, ds', b);
+    assert LargerBallotAcceptors(c, ds', b, v);
+    assert LargerBallotProposeMsgs(c, ds', b, v);
 
     assert Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v); 
 }
 
 
-lemma AgreementChosenInv_NoneChosen_AccAction_MaybeChoose_P2LeaderV(
+lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotPromiseMsgs(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_Common(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires actor.agt == Acc
+    requires !SomeValueChosen(c, ds)
+    requires Chosen(c, ds', b, v)
+    requires OneValuePerBallot(c, ds');
+    ensures LargerBallotPromiseMsgs(c, ds', b, v)
+{
+    assume false;
+}
+
+
+lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_P2LeaderV(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
     requires Agreement_Chosen_Inv(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
@@ -167,9 +185,9 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Chosen(c, ds', b, v)
     requires OneValuePerBallot(c, ds')
     requires LargerBallotsPromiseQrms(c, ds', b)
-    requires LargerBallotPromiseMsgs(c, ds', v, b)
+    requires LargerBallotPromiseMsgs(c, ds', b, v)
     requires b != Bottom
-    ensures LargerBallotPhase2LeadersV(c, ds', v, b)
+    ensures LargerBallotPhase2LeadersV(c, ds', b, v)
 {
     forall l_idx |  && c.ValidLdrIdx(l_idx) 
                     && BalLtEq(b, ds'.leaders[l_idx].ballot) 

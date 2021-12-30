@@ -312,7 +312,7 @@ predicate TwoLeadersHaveSameV(c:Constants, ds:DistrSys, i1:int, i2:int)
     LeaderHasValueV(c, ds, i1, ds.leaders[i2].val)
 }
 
-predicate LeaderIdxDecidedV(c:Constants, ds:DistrSys, idx:int, v:Value, b:Ballot) 
+predicate LeaderIdxDecidedV(c:Constants, ds:DistrSys, idx:int, b:Ballot, v:Value) 
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(idx)
 {

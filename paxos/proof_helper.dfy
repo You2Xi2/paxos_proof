@@ -112,12 +112,13 @@ c:Constants, ds:DistrSys, ds':DistrSys)
 }
 
 
-/* All new packets are spawned in sendIos */
+/* All new packets are spawned in sendIos, and anything in sendIos goes into the network */
 lemma lemma_NewPacketsComeFromSendIos(
     c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     ensures forall p | p in ds'.network.sentPackets && p !in ds.network.sentPackets :: p in sendIos
+    ensures forall p | p in sendIos :: p in ds'.network.sentPackets
 {
     var e, e' := ds.network, ds'.network;
     var sendSet := set s | s in sendIos;

@@ -65,6 +65,7 @@ lemma AgreementChosenInv_NoneChosen(c:Constants, ds:DistrSys, ds':DistrSys)
     var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
     if actor.agt == Ldr {
         // If actor is a Leader
+        // No values are chosen in this step
         assume false;
         assert Agreement_Chosen_Inv(c, ds');
     } else {
@@ -86,35 +87,112 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     ensures Agreement_Chosen_Inv(c, ds')
 {
     AgreementChosenInv_NoneChosen_AccAction_AgreementChosen(c, ds, ds', actor, recvIos, sendIos);
-
-    assume false;
     assert OneValuePerBallot(c, ds');
 
     // Leader state
-    assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');
-    assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
+    assume LdrAcceptsSetCorrespondToAcceptMsg(c, ds');      // TODO
+    assume LdrPromisesSetCorrespondToPromiseMsg(c, ds');    // TODO
 
     // Acceptor state
-    assert AccPromisedBallotLargerThanAccepted(c, ds');
+    assume AccPromisedBallotLargerThanAccepted(c, ds');     // TODO
 
     // Messages
-    assert PromiseVBImpliesAcceptMsg(c, ds');
-    assert AcceptMsgImpliesAccepted(c, ds');
-    assert AcceptedImpliesAcceptMessage(c, ds');
-    assert AcceptMsgImpliesProposeMsg(c, ds');
-    assert ProposeMsgImpliesQuorumOfPromise(c, ds');
-    assert PromisedImpliesNoMoreAccepts(c, ds');
+    assume PromiseVBImpliesAcceptMsg(c, ds');               // TODO
+    assume AcceptMsgImpliesAccepted(c, ds');                // TODO
+    assume AcceptedImpliesAcceptMessage(c, ds');            // TODO
+    assume AcceptMsgImpliesProposeMsg(c, ds');              // TODO
+    assume LeaderP2ImpliesQuorumOfPromise(c, ds');          // TODO
+    assume ProposeMsgImpliesQuorumOfPromise(c, ds');        // TODO
+    assume PromisedImpliesNoMoreAccepts(c, ds');            // TODO
 
     // Chosen
     forall b, v | Chosen(c, ds', b, v) 
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
     {
-        assume false;
-        assert Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v); //
+        AgreementChosenInv_NoneChosen_AccAction_MaybeChoose(c, ds, ds', actor, recvIos, sendIos, b, v);
     }
     assert Agreement_Chosen_Inv(c, ds');
 }
 
+
+lemma AgreementChosenInv_NoneChosen_AccAction_MaybeChoose(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires actor.agt == Acc
+    requires !SomeValueChosen(c, ds)
+    requires Chosen(c, ds', b, v)
+    requires OneValuePerBallot(c, ds');
+    ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
+{
+    assume false;
+    assume  LargerBallotsPromiseQrms(c, ds', b); // TODO: we need this
+    assume b != Bottom;  // TODO: Prove this later
+    AgreementChosenInv_NoneChosen_AccAction_MaybeChoose_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b, v);
+    assert LargerBallotPhase2LeadersV(c, ds', v, b);  //
+
+    assume false;
+    assert LargerBallotAcceptors(c, ds', v, b);
+    assert LargerBallotPromiseMsgs(c, ds', v, b);
+    assert LargerBallotProposeMsgs(c, ds', v, b);
+    assert LargerBallotsPromiseQrms(c, ds', b);
+
+    assert Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v); 
+}
+
+
+lemma {:timeLimitMultiplier 2} AgreementChosenInv_NoneChosen_AccAction_MaybeChoose_P2LeaderV(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires actor.agt == Acc
+    requires !SomeValueChosen(c, ds)
+    requires Chosen(c, ds', b, v)
+    requires OneValuePerBallot(c, ds')
+    requires LargerBallotsPromiseQrms(c, ds', b)
+    requires LargerBallotPromiseMsgs(c, ds', v, b)
+    requires b != Bottom
+    ensures LargerBallotPhase2LeadersV(c, ds', v, b)
+{
+    forall l_idx |  && c.ValidLdrIdx(l_idx) 
+                    && BalLtEq(b, ds'.leaders[l_idx].ballot) 
+                    && LeaderInPhase2(c, ds', l_idx) 
+    ensures LeaderHasValueV(c, ds', l_idx, v)
+    {
+        if !LeaderHasValueV(c, ds', l_idx, v) {
+            var b', v' := ds'.leaders[l_idx].ballot, ds'.leaders[l_idx].val;
+            assert v' != v;
+            if b' == b {
+                var prop_p := lemma_ChosenImpliesProposeMsg(c, ds', b, v);
+                assert false; 
+            } else {
+                assert BalLt(b, b');
+                var qrm' :| && QuorumOfPromiseMsgs(c, ds', qrm', b')
+                            && (|| PromiseWithHighestBallot(qrm').v == v'
+                                || PromiseWithHighestBallot(qrm').v == Nil);
+                if PromiseWithHighestBallot(qrm').v == Nil {
+                    lemma_HighestPromiseValNilImpliesAllBottom(qrm');
+                    assert !QuorumHasSeenB(c, ds', qrm', b);
+                    assert false;
+                } else {
+                    var pivot:Packet :| pivot in qrm' && BalLtEq(b, pivot.msg.vb.b);
+                    assert pivot.msg.vb.v == v;
+                    forall p:Packet | p in qrm' && BalLtEq(pivot.msg.vb.b, p.msg.vb.b) 
+                    ensures p.msg.vb.v == v {
+                        lemma_BalLtEqTransitivity(b, pivot.msg.vb.b, p.msg.bal);
+                    }
+                    lemma_PromiseWithHighestBallotProperty(qrm', pivot, v);
+                    assert PromiseWithHighestBallot(qrm').v == v;
+                    assert false;
+                }
+            }
+        }
+    }
+}
 
 
 lemma AgreementChosenInv_NoneChosen_AccAction_AgreementChosen(
@@ -171,6 +249,55 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 
 
 //////////////           Agreement Sub-Lemma: Existing decision            ///////////////
+
+
+lemma AgreementChosenInv_SomeChosen_AccAction_MaybeChoose(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires actor.agt == Acc
+    requires SomeValueChosen(c, ds)
+    requires Chosen(c, ds', b, v)
+    ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
+{
+    assume false;
+    // forall l_idx | && c.ValidLdrIdx(l_idx) 
+    //             && BalLtEq(b, ds'.leaders[l_idx].ballot) 
+    //             && LeaderInPhase2(c, ds', l_idx) 
+    // ensures LeaderHasValueV(c, ds', l_idx, v)
+    // {
+    //     if exists l_idx :: 
+    //         && c.ValidLdrIdx(l_idx) 
+    //         && BalLtEq(b, ds'.leaders[l_idx].ballot) 
+    //         && LeaderInPhase2(c, ds', l_idx) 
+    //         && !LeaderHasValueV(c, ds', l_idx, v)
+    //     {
+    //         var l_idx :| c.ValidLdrIdx(l_idx) && BalLtEq(b, ds'.leaders[l_idx].ballot) && LeaderInPhase2(c, ds', l_idx) && !LeaderHasValueV(c, ds', l_idx, v);
+    //         assert ds.leaders[l_idx] == ds'.leaders[l_idx];
+    //         var b', v' := ds.leaders[l_idx].ballot, ds.leaders[l_idx].val;
+    //         var qrm'  :| && QuorumOfPromiseMsgs(c, ds, qrm', b')
+    //                     && (|| PromiseWithHighestBallot(qrm').v == v'
+    //                         || PromiseWithHighestBallot(qrm').v == Nil);
+            
+    //         assert false;
+    //     }
+    //     assert LeaderHasValueV(c, ds', l_idx, v);
+    // }
+
+    // assert LargerBallotPhase2LeadersV(c, ds', v, b);  //
+
+    // assume false;
+    // assert LargerBallotAcceptors(c, ds', v, b);
+    // assert LargerBallotPromiseMsgs(c, ds', v, b);
+    // assert LargerBallotProposeMsgs(c, ds', v, b);
+    // assert LargerBallotsPromiseQrms(c, ds', b);
+
+    // assert Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v); 
+}
+
+
 
 
 // lemma NextPreservesAgreementInv_SomeoneHadDecided(c:Constants, ds:DistrSys, ds':DistrSys) 

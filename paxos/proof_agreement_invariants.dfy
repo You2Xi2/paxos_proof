@@ -62,6 +62,7 @@ predicate Agreement_Chosen_Inv(c:Constants, ds:DistrSys)
     && AcceptMsgImpliesAccepted(c, ds)
     && AcceptedImpliesAcceptMessage(c, ds)
     && AcceptMsgImpliesProposeMsg(c, ds)
+    && LeaderP2ImpliesQuorumOfPromise(c, ds)
     && ProposeMsgImpliesQuorumOfPromise(c, ds)
     && PromisedImpliesNoMoreAccepts(c, ds)
 
@@ -72,7 +73,7 @@ predicate Agreement_Chosen_Inv(c:Constants, ds:DistrSys)
 }
 
 
-/* Things that are true if v is decided with ballot b. */
+/* Things that are true if v is chosen with ballot b. */
 predicate Agreement_Chosen_Inv_SomeValChosen(c:Constants, ds:DistrSys, b:Ballot, v:Value) 
     requires c.WF() && ds.WF(c)
     requires AllPacketsValid(c, ds)
@@ -90,22 +91,54 @@ predicate Agreement_Chosen_Inv_SomeValChosen(c:Constants, ds:DistrSys, b:Ballot,
 predicate OneValuePerBallot(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    && (forall l1, l2 | c.ValidLdrIdx(l1) && c.ValidLdrIdx(l2) && l1!=l2 :: ds.leaders[l1].ballot != ds.leaders[l2].ballot)
-    && (forall b, prop_p1, prop_p2 | 
+    && OneValuePerBallot_Leaders(c, ds)
+    && OneValuePerBallot_ProposeMsg(c, ds)
+    && OneValuePerBallot_AcceptMsg(c, ds)
+    && OneValuePerBallot_ProposeMsgAndLeader(c, ds)
+}
+
+predicate OneValuePerBallot_Leaders(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall l1, l2 | c.ValidLdrIdx(l1) && c.ValidLdrIdx(l2) && l1!=l2 :: ds.leaders[l1].ballot != ds.leaders[l2].ballot
+}
+
+predicate OneValuePerBallot_ProposeMsg(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall prop_p1, prop_p2 | 
         && prop_p1 in ds.network.sentPackets && prop_p2 in ds.network.sentPackets
         && prop_p1.msg.Propose? && prop_p2.msg.Propose?
-        && prop_p1.msg.bal == b && prop_p2.msg.bal == b 
+        && prop_p1.msg.bal == prop_p2.msg.bal
         :: 
         prop_p1.msg.val == prop_p2.msg.val
-    )
-    && (forall b, acc_p1, acc_p2 | 
+}
+
+predicate OneValuePerBallot_AcceptMsg(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall acc_p1, acc_p2 | 
         && acc_p1 in ds.network.sentPackets && acc_p2 in ds.network.sentPackets
         && acc_p1.msg.Accept? && acc_p2.msg.Accept?
-        && acc_p1.msg.bal == b && acc_p2.msg.bal == b 
+        && acc_p1.msg.bal == acc_p2.msg.bal
         :: 
         acc_p1.msg.val == acc_p1.msg.val
-    )
 }
+
+predicate OneValuePerBallot_ProposeMsgAndLeader(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall l_idx, prop | 
+        && c.ValidLdrIdx(l_idx)
+        && LeaderInPhase2(c, ds, l_idx) 
+        && prop in ds.network.sentPackets
+        && prop.msg.Propose?
+        && prop.msg.bal == ds.leaders[l_idx].ballot
+        :: 
+        prop.msg.val == ds.leaders[l_idx].val
+}
+
+
 
 
 /* For each promise message p, if it contains an accepted (v, b), then there is an 
@@ -176,6 +209,24 @@ predicate AcceptMsgImpliesProposeMsg(c:Constants, ds:DistrSys)
         && prop_p.dst == acc
         && prop_p.msg.bal == b
         && prop_p.msg.val == v
+    )
+}
+
+
+/* For each leader in phase 2, there is a corresponding quorum of Promise packets 
+* in the network supporting it's ballot */
+predicate LeaderP2ImpliesQuorumOfPromise(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall idx | c.ValidLdrIdx(idx) && LeaderInPhase2(c, ds, idx)
+    :: (
+    var b := ds.leaders[idx].ballot;
+    var v := ds.leaders[idx].val;
+    exists qrm  :: 
+        && QuorumOfPromiseMsgs(c, ds, qrm, b)
+        && (|| PromiseWithHighestBallot(qrm).v == v
+            || PromiseWithHighestBallot(qrm).v == Nil
+        )
     )
 }
 
@@ -282,7 +333,7 @@ predicate LdrBallotNotBottom(c:Constants, ds:DistrSys)
 
 
 
-/* If v is decided with ballot b, then all phase 2 leaders with ballots
+/* If v is chosen with ballot b, then all phase 2 leaders with ballots
 * b' >= b must be of v */
 predicate LargerBallotPhase2LeadersV(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
     requires c.WF() && ds.WF(c)
@@ -294,7 +345,7 @@ predicate LargerBallotPhase2LeadersV(c:Constants, ds:DistrSys, v:Value, b:Ballot
     :: LeaderHasValueV(c, ds, i', v)
 }
 
-/* If v is decided with ballot b, then for any acceptor that accepted a ballot b'>=b, 
+/* If v is chosen with ballot b, then for any acceptor that accepted a ballot b'>=b, 
 * the accepted value is v */
 predicate LargerBallotAcceptors(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
     requires c.WF() && ds.WF(c)
@@ -304,7 +355,7 @@ predicate LargerBallotAcceptors(c:Constants, ds:DistrSys, v:Value, b:Ballot)
 }
 
 
-/* If v is decided with ballot b, then for any Promise msgs with valbal ballot b'>=b, 
+/* If v is chosen with ballot b, then for any Promise msgs with valbal ballot b'>=b, 
 * the valbal value is v */
 predicate LargerBallotPromiseMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
     requires c.WF() && ds.WF(c)
@@ -313,7 +364,7 @@ predicate LargerBallotPromiseMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot)
     :: p.msg.vb.v == v
 }
 
-/* If v is decided with ballot b, then for any Propose msgs with ballot b'>=b, 
+/* If v is chosen with ballot b, then for any Propose msgs with ballot b'>=b, 
 * the value is v */
 predicate LargerBallotProposeMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot) 
     requires c.WF() && ds.WF(c)
@@ -322,7 +373,7 @@ predicate LargerBallotProposeMsgs(c:Constants, ds:DistrSys, v:Value, b:Ballot)
     :: p.msg.val == v
 }
 
-/* If v is decided with ballot b, then all Promise quorums for ballots
+/* If v is chosen with ballot b, then all Promise quorums for ballots
 * b' >= b must come from an acceptor that accepted (v, b) */
 predicate LargerBallotsPromiseQrms(c:Constants, ds:DistrSys, b:Ballot) 
     requires c.WF() && ds.WF(c)

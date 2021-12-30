@@ -109,6 +109,65 @@ c:Constants, ds:DistrSys, ds':DistrSys)
 }
 
 
+/* If (b,v) is chosen, then there must be a quorum of Promise for b */
+lemma lemma_ChosenImpliesPromiseQrm(c:Constants, ds:DistrSys, b:Ballot, v:Value) returns (qrm:set<Packet>)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires Chosen(c, ds, b, v) 
+    ensures QuorumOfPromiseMsgs(c, ds, qrm, b)
+{
+    assert exists q :: QuorumOfPromiseMsgs(c, ds, q, b);
+    qrm :| QuorumOfPromiseMsgs(c, ds, qrm, b);
+}
+
+
+/* If (b,v) is chosen, then is must have been proposed */
+lemma lemma_ChosenImpliesProposeMsg(c:Constants, ds:DistrSys, b:Ballot, v:Value) returns (prop:Packet)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires Chosen(c, ds, b, v) 
+    ensures prop in ds.network.sentPackets && prop.msg.Propose? 
+    ensures prop.msg.val == v && prop.msg.bal == b
+{
+    assert exists acc :: 
+            && acc in ds.network.sentPackets 
+            && acc.msg.Propose? 
+            && acc.msg.val == v && acc.msg.bal == b;
+    var acc :| acc in ds.network.sentPackets && acc.msg.Propose? && acc.msg.val == v && acc.msg.bal == b;
+    assert exists prop_p :: 
+        && prop_p in ds.network.sentPackets
+        && prop_p.msg.Propose?
+        && prop_p.msg.bal == b
+        && prop_p.msg.val == v;
+    prop :| prop in ds.network.sentPackets && prop.msg.Propose? && prop.msg.bal == b && prop.msg.val == v;
+}
+
+
+lemma lemma_HighestPromiseValNilImpliesAllBottom(pset:set<Packet>) 
+    requires |pset| > 0
+    ensures PromiseWithHighestBallot(pset).v == Nil ==> 
+    (forall p | p in pset && p.msg.Promise? :: p.msg.vb.b == Bottom)
+{
+    // TODO
+    assume false;
+}
+
+lemma lemma_PromiseWithHighestBallotProperty(pset:set<Packet>, p:Packet, v:Value)
+    requires |pset| > 0
+    requires p.msg.Promise?
+    requires p in pset;
+    requires forall p' | p' in pset && p'.msg.Promise? && BalLtEq(p.msg.vb.b, p'.msg.vb.b) :: p'.msg.vb.v == v
+    ensures PromiseWithHighestBallot(pset).v == v
+{
+    // TODO
+    assume false;
+}
+
+lemma lemma_BalLtEqTransitivity(b1:Ballot, b2:Ballot, b3:Ballot) 
+    requires BalLtEq(b1, b2)
+    requires BalLtEq(b2, b3)
+    ensures BalLtEq(b1, b3)
+{}
+
+
 
 /*****************************************************************************************
 *                                        Utils                                           *

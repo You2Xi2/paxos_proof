@@ -111,7 +111,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     // Messages
     assume PromiseVBImpliesAcceptMsg(c, ds');               // TODO
     assume AcceptMsgImpliesAccepted(c, ds');                // TODO
-    assume AcceptedImpliesAcceptMessage(c, ds');            // TODO
+    assume AcceptedImpliesAcceptMsg(c, ds');            // TODO
     assume AcceptMsgImpliesProposeMsg(c, ds');              // TODO
     assume LeaderP2ImpliesQuorumOfPromise(c, ds');          // TODO
     assume ProposeMsgImpliesQuorumOfPromise(c, ds');        // TODO
@@ -143,13 +143,14 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires OneValuePerBallot(c, ds');
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
 {
+    assume LargerBallotAcceptors(c, ds', b, v);     // TODO: we need this
+    assume LargerBallotAcceptMsgs(c, ds', b, v);     // TODO: we need this
     AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
     assert LargerBallotPromiseMsgs(c, ds', b, v);  
 
     assume LargerBallotsPromiseQrms(c, ds', b);     // TODO: we need this
 
     AgreementChosenInv_NoneChosen_AccAction_NewChosenV_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b, v);
-    assert LargerBallotPhase2LeadersV(c, ds', b, v);  
 
     assume false;
     assert LargerBallotAcceptors(c, ds', b, v);
@@ -167,26 +168,21 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
-    requires recvIos[0].msg.Propose?
-    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
-    requires !SomeValueChosen(c, ds)
     requires Chosen(c, ds', b, v)
-    requires OneValuePerBallot(c, ds');
+    requires LargerBallotAcceptMsgs(c, ds', b, v)
     ensures LargerBallotPromiseMsgs(c, ds', b, v)
 {
     forall p | isPromisePkt(ds', p) && BalLtEq(b, p.msg.vb.b)
     ensures p.msg.vb.v == v 
     {
         var b', v' := p.msg.vb.b, p.msg.vb.v;
-        lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
-        lemma_SingleElemList(sendIos, sendIos[0]);      
-        assert isPromisePkt(ds, p);
-        if b == b' {
-            assert v' == v;     // by OneValuePerBallot_PromiseMsg(c, ds)
-        } else {
-            // TODO
-            assert BalLt(b, b');
-            assume false;
+        var ap :|  && isAcceptPkt(ds', ap)
+                    && ap.src == p.src
+                    && ap.msg.bal == b'
+                    && ap.msg.val == v';
+        assert LargerBallotAcceptMsgs(c, ds', b, v);
+        if v' != v {
+            assert false;
         }
     }
 }

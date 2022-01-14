@@ -67,15 +67,16 @@ predicate Agreement_Chosen_Inv_Common(c:Constants, ds:DistrSys)
 
     // Acceptor state
     && AccPromisedBallotLargerThanAccepted(c, ds)
+    && PromiseMsgImpliesPromised(c, ds)
+    && AcceptMsgImpliesAccepted(c, ds)
 
     // Messages
     && PromiseVBImpliesAcceptMsg(c, ds)
-    && AcceptMsgImpliesAccepted(c, ds)
-    && AcceptedImpliesAcceptMessage(c, ds)
-    && AcceptMsgImpliesProposeMsg(c, ds)
-    && LeaderP2ImpliesQuorumOfPromise(c, ds)
-    && ProposeMsgImpliesQuorumOfPromise(c, ds)
     && PromisedImpliesNoMoreAccepts(c, ds)
+    && ProposeMsgImpliesQuorumOfPromise(c, ds)
+    && AcceptedImpliesAcceptMsg(c, ds)
+    && AcceptMsgImpliesProposeMsg(c, ds)
+    && LeaderP2ImpliesQuorumOfPromise(c, ds)    
 }
 
 
@@ -87,6 +88,7 @@ predicate Agreement_Chosen_Inv_SomeValChosen(c:Constants, ds:DistrSys, b:Ballot,
 {
     && LargerBallotPhase2LeadersV(c, ds, b, v)
     && LargerBallotAcceptors(c, ds, b, v)
+    && LargerBallotAcceptMsgs(c, ds, b, v)
     && LargerBallotPromiseMsgs(c, ds, b, v)
     && LargerBallotProposeMsgs(c, ds, b, v)
     && LargerBallotsPromiseQrms(c, ds, b)
@@ -160,34 +162,37 @@ predicate PromiseVBImpliesAcceptMsg(c:Constants, ds:DistrSys)
     requires c.WF() && ds.WF(c)
 {
     forall prom_p | 
-        && prom_p in ds.network.sentPackets 
-        && prom_p.msg.Promise?
+        && isPromisePkt(ds, prom_p)
         && prom_p.msg.vb.b != Bottom
     :: 
     (exists acc_p :: 
-        && acc_p in ds.network.sentPackets
-        && acc_p.msg.Accept?
+        && isAcceptPkt(ds, acc_p)
         && acc_p.src == prom_p.src
         && acc_p.msg.bal == prom_p.msg.vb.b
         && acc_p.msg.val == prom_p.msg.vb.v)
 }
 
+/* If an Promise msg in network with ballot b, then acceptor x 
+* has promise >= b */
+predicate PromiseMsgImpliesPromised(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall p:Packet | c.ValidAccIdx(p.src.idx) && isPromisePkt(ds, p)
+    :: BalLtEq(p.msg.bal, ds.acceptors[p.src.idx].promised)
+}
+
 /* If an Accept msg in network with src x, ballot b, then balval of acceptor x 
-* has has ballot >= b */
+* has ballot >= b */
 predicate AcceptMsgImpliesAccepted(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    forall p | 
-        && p in ds.network.sentPackets 
-        && p.msg.Accept?
-        && c.ValidAccIdx(p.src.idx) 
-    ::
-        BalLtEq(p.msg.bal, ds.acceptors[p.src.idx].accepted.b)
+    forall p:Packet | c.ValidAccIdx(p.src.idx) && isAcceptPkt(ds, p)
+    :: BalLtEq(p.msg.bal, ds.acceptors[p.src.idx].accepted.b)
 }
 
 /* If an acceptor has currently accepted ballot b, then there must be an Accept message in the network
 * from that acceptor */
-predicate AcceptedImpliesAcceptMessage(c:Constants, ds:DistrSys) 
+predicate AcceptedImpliesAcceptMsg(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
     forall idx | 
@@ -208,16 +213,13 @@ predicate AcceptedImpliesAcceptMessage(c:Constants, ds:DistrSys)
 predicate AcceptMsgImpliesProposeMsg(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    forall acc_p | 
-        && acc_p in ds.network.sentPackets 
-        && acc_p.msg.Accept?
+    forall acc_p | isAcceptPkt(ds, acc_p)
     :: (
     var b, v := acc_p.msg.bal, acc_p.msg.val;
     var ldr := acc_p.dst;
     var acc := acc_p.src;
     exists prop_p :: 
-        && prop_p in ds.network.sentPackets
-        && prop_p.msg.Propose?
+        && isProposePkt(ds, prop_p)
         && prop_p.src == ldr
         && prop_p.dst == acc
         && prop_p.msg.bal == b
@@ -249,9 +251,7 @@ predicate LeaderP2ImpliesQuorumOfPromise(c:Constants, ds:DistrSys)
 predicate ProposeMsgImpliesQuorumOfPromise(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    forall prop_p | 
-        && prop_p in ds.network.sentPackets 
-        && prop_p.msg.Propose?
+    forall prop_p | isProposePkt(ds, prop_p)
     :: (
     var b := prop_p.msg.bal;
     var v := prop_p.msg.val;
@@ -384,6 +384,15 @@ predicate LargerBallotAcceptors(c:Constants, ds:DistrSys, b:Ballot, v:Value)
 {
     forall i' | c.ValidAccIdx(i') && BalLtEq(b, ds.acceptors[i'].accepted.b)
     :: AcceptorHasValueV(c, ds, i', v)
+}
+
+/* If v is chosen with ballot b, then for any Accept msgs with ballot b'>=b, 
+* the value is v */
+predicate LargerBallotAcceptMsgs(c:Constants, ds:DistrSys, b:Ballot, v:Value) 
+    requires c.WF() && ds.WF(c)
+{
+    forall p | isAcceptPkt(ds, p) && BalLtEq(b, p.msg.bal)
+    :: p.msg.val == v
 }
 
 

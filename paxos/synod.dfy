@@ -46,8 +46,10 @@ datatype Constants = Constants(f:nat, ldr_ids:seq<Id>, ldr_vals:seq<Value>, acc_
     }
 
     predicate UniqueIds() {
-        && (forall i, j | ValidLdrIdx(i) && ValidLdrIdx(j) && ldr_ids[i]==ldr_ids[j] :: i == j)
-        && (forall i, j | ValidAccIdx(i) && ValidAccIdx(j) && acc_ids[i]==acc_ids[j] :: i == j)
+        && seqIsUnique(ldr_ids)
+        && seqIsUnique(acc_ids)
+        // && (forall i, j | ValidLdrIdx(i) && ValidLdrIdx(j) && ldr_ids[i]==ldr_ids[j] :: i == j)
+        // && (forall i, j | ValidAccIdx(i) && ValidAccIdx(j) && acc_ids[i]==acc_ids[j] :: i == j)
     }
 
     predicate ValidIds() {
@@ -194,6 +196,28 @@ predicate QuorumOfPromiseMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballo
     && (forall p | p in qrm :: 
             && isPromisePkt(ds, p)
             && p.msg.bal == b
+    )
+}
+
+/* acc_qrm is a quorum of acceptors with promised ballot >= b */
+predicate QuorumOfAcceptorsPromised(c:Constants, ds:DistrSys, acc_qrm:set<Id>, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    && |acc_qrm| >= c.f + 1
+    && (forall id | id in acc_qrm :: 
+            && c.ValidAccId(id)
+            && BalLtEq(b, ds.acceptors[id.idx].promised)
+    )
+}
+
+/* acc_qrm is a quorum of acceptors with accepted (b, _) */
+predicate QuorumOfAcceptorsAccepted(c:Constants, ds:DistrSys, acc_qrm:set<Id>, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    && |acc_qrm| >= c.f + 1
+    && (forall id | id in acc_qrm :: 
+            && c.ValidAccId(id)
+            && BalLtEq(b, ds.acceptors[id.idx].accepted.b)
     )
 }
 

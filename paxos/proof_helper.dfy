@@ -207,6 +207,13 @@ lemma lemma_BalLtEqTransitivity(b1:Ballot, b2:Ballot, b3:Ballot)
     ensures BalLtEq(b1, b3)
 {}
 
+lemma lemma_BalLtTransitivity1(b1:Ballot, b2:Ballot, b3:Ballot) 
+    requires BalLt(b1, b2)
+    requires BalLtEq(b2, b3)
+    ensures BalLt(b1, b3)
+    ensures BalGt(b3, b1)
+{}
+
 
 lemma lemma_SingleElemList<T>(s:seq<T>, e:T) 
     requires |s| == 1;

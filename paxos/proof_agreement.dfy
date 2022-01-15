@@ -151,7 +151,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 
     assume LargerBallotsPromiseQrms(c, ds', b);     // TODO: we need this
 
-
+    // Done
     AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
     assert LargerBallotProposeMsgs(c, ds', b, v);
 
@@ -213,22 +213,13 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
         if b' == b {
             assert v == v';     // by OneValuePerBallot_ProposeMsg
         } else {
-            assert BalLt(b, b');
             var prom_qrm :| && QuorumOfPromiseMsgs(c, ds', prom_qrm, b')
                             && (|| PromisePktWithHighestBallot(prom_qrm).msg.vb.v == v'
                                 || PromisePktWithHighestBallot(prom_qrm).msg.vb.v == Nil);
-            if PromisePktWithHighestBallot(prom_qrm).msg.vb.v == v' {
-                var prom:Packet :| prom in prom_qrm && prom.msg.Promise? && prom.msg.vb.v == v';
-                assert isPromisePkt(ds', prom);
-
-
-
-                assume BalLtEq(b, prom.msg.vb.b);  // True because Quorum must have seen b
-                assert v' == v;
-            } else {
-                // Quorum must have seen b. So C!
-                assume false;
-            }
+            var prom := PromisePktWithHighestBallot(prom_qrm);
+            var prom_smaller:Packet :| prom_smaller in prom_qrm && BalLtEq(b, prom_smaller.msg.vb.b);  // because Quorum must have seen b (LargerBallotsPromiseQrms)
+            lemma_BalLtEqTransitivity(b, prom_smaller.msg.vb.b, prom.msg.vb.b);
+            assert PromisePktWithHighestBallot(prom_qrm).msg.vb.v == v;     // because LargerBallotPromiseMsgs
         }
     }
 }

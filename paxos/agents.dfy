@@ -198,9 +198,9 @@ predicate LeaderProcessValidPromise(l:Leader, l':Leader, pkt:Packet, sendIos:seq
         && l'.state == P2a
         && l'.ballot == l.ballot
         // && l'.val == (if msg.val == Nil then l.val else msg.val)  // Bug 6
-        && l'.val == (if PromiseWithHighestBallot(promises).v == Nil 
+        && l'.val == (if PromisePktWithHighestBallot(promises).msg.vb.v == Nil 
                     then l.val 
-                    else PromiseWithHighestBallot(promises).v)
+                    else PromisePktWithHighestBallot(promises).msg.vb.v)
         && l'.promises == {}
         && l'.accepts == {}
     else 
@@ -311,9 +311,9 @@ predicate LeaderProcessValidAccept(l:Leader, l':Leader, src:Id, msg:Message, sen
 // }
 
 
-function PromiseWithHighestBallot(pset:set<Packet>) : (vb:ValBal) 
+function PromisePktWithHighestBallot(pset:set<Packet>) : (p:Packet)
     requires |pset| > 0
     // requires forall p | p in pset :: p.msg.Promise?
-    ensures exists p :: p in pset && p.msg.Promise? && p.msg.vb == vb
-    ensures forall p' | p' in pset && p'.msg.Promise? :: BalLtEq(p'.msg.vb.b, vb.b)
+    ensures p.msg.Promise? && p in pset
+    ensures forall p' | p' in pset && p'.msg.Promise? :: BalLtEq(p'.msg.vb.b, p.msg.vb.b)
 }

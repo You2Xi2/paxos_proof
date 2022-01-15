@@ -41,8 +41,6 @@ lemma NextPreservesTrivialities(c:Constants, ds:DistrSys, ds':DistrSys)
 
     }
     assert AllPacketsValid(c, ds');
-
-    assume false;
     assert BallotBottomness_ValueNilness(c, ds');
     
 }
@@ -145,16 +143,21 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 {
     assume LargerBallotAcceptors(c, ds', b, v);     // TODO: we need this
     assume LargerBallotAcceptMsgs(c, ds', b, v);     // TODO: we need this
+
+    // Done
     AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
     assert LargerBallotPromiseMsgs(c, ds', b, v);  
+    
 
     assume LargerBallotsPromiseQrms(c, ds', b);     // TODO: we need this
 
-    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b, v);
 
-    assume false;
-    assert LargerBallotAcceptors(c, ds', b, v);
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
     assert LargerBallotProposeMsgs(c, ds', b, v);
+
+    // Done
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b, v);
+    assert LargerBallotPhase2LeadersV(c, ds', b, v);
 
     assert Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v); 
 }
@@ -168,6 +171,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
+    requires !SomeValueChosen(c, ds)
     requires Chosen(c, ds', b, v)
     requires LargerBallotAcceptMsgs(c, ds', b, v)
     ensures LargerBallotPromiseMsgs(c, ds', b, v)
@@ -183,6 +187,48 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
         assert LargerBallotAcceptMsgs(c, ds', b, v);
         if v' != v {
             assert false;
+        }
+    }
+}
+
+
+lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotProposeMsgs(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_Common(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires !SomeValueChosen(c, ds)
+    requires Chosen(c, ds', b, v)
+    requires LargerBallotPromiseMsgs(c, ds', b, v)
+    requires LargerBallotsPromiseQrms(c, ds', b)
+    ensures LargerBallotProposeMsgs(c, ds', b, v)
+{
+    forall p | isProposePkt(ds', p) && BalLtEq(b, p.msg.bal)
+    ensures p.msg.val == v
+    {
+        var b', v' := p.msg.bal, p.msg.val;
+        if b' == b {
+            assert v == v';     // by OneValuePerBallot_ProposeMsg
+        } else {
+            assert BalLt(b, b');
+            var prom_qrm :| && QuorumOfPromiseMsgs(c, ds', prom_qrm, b')
+                            && (|| PromisePktWithHighestBallot(prom_qrm).msg.vb.v == v'
+                                || PromisePktWithHighestBallot(prom_qrm).msg.vb.v == Nil);
+            if PromisePktWithHighestBallot(prom_qrm).msg.vb.v == v' {
+                var prom:Packet :| prom in prom_qrm && prom.msg.Promise? && prom.msg.vb.v == v';
+                assert isPromisePkt(ds', prom);
+
+
+
+                assume BalLtEq(b, prom.msg.vb.b);  // True because Quorum must have seen b
+                assert v' == v;
+            } else {
+                // Quorum must have seen b. So C!
+                assume false;
+            }
         }
     }
 }
@@ -221,9 +267,9 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
             } else {
                 assert BalLt(b, b');
                 var qrm' :| && QuorumOfPromiseMsgs(c, ds', qrm', b')
-                            && (|| PromiseWithHighestBallot(qrm').v == v'
-                                || PromiseWithHighestBallot(qrm').v == Nil);
-                if PromiseWithHighestBallot(qrm').v == Nil {
+                            && (|| PromisePktWithHighestBallot(qrm').msg.vb.v == v'
+                                || PromisePktWithHighestBallot(qrm').msg.vb.v == Nil);
+                if PromisePktWithHighestBallot(qrm').msg.vb.v == Nil {
                     lemma_HighestPromiseValNilImpliesAllBottom(qrm');
                     assert !QuorumHasSeenB(c, ds', qrm', b);
                     assert false;
@@ -234,8 +280,8 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
                     ensures p.msg.vb.v == v {
                         lemma_BalLtEqTransitivity(b, pivot.msg.vb.b, p.msg.vb.b);
                     }
-                    lemma_PromiseWithHighestBallotProperty(qrm', pivot, v);
-                    assert PromiseWithHighestBallot(qrm').v == v;
+                    lemma_PromisePktWithHighestBallotProperty(qrm', pivot, v);
+                    assert PromisePktWithHighestBallot(qrm').msg.vb.v == v;
                     assert false;
                 }
             }
@@ -324,8 +370,8 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     //         assert ds.leaders[l_idx] == ds'.leaders[l_idx];
     //         var b', v' := ds.leaders[l_idx].ballot, ds.leaders[l_idx].val;
     //         var qrm'  :| && QuorumOfPromiseMsgs(c, ds, qrm', b')
-    //                     && (|| PromiseWithHighestBallot(qrm').v == v'
-    //                         || PromiseWithHighestBallot(qrm').v == Nil);
+    //                     && (|| PromisePktWithHighestBallot(qrm').v == v'
+    //                         || PromisePktWithHighestBallot(qrm').v == Nil);
             
     //         assert false;
     //     }

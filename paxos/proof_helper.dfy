@@ -176,29 +176,29 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 lemma lemma_HighestPromiseValNilImpliesAllBottom(pset:set<Packet>) 
     requires |pset| > 0
     requires forall p | p in pset && p.msg.Promise? :: p.msg.vb.v == Nil <==> p.msg.vb.b == Bottom
-    ensures PromiseWithHighestBallot(pset).v == Nil ==> 
+    ensures PromisePktWithHighestBallot(pset).msg.vb.v == Nil ==> 
     (forall p | p in pset && p.msg.Promise? :: p.msg.vb.b == Bottom)
 {
-    if PromiseWithHighestBallot(pset).v == Nil {
+    if PromisePktWithHighestBallot(pset).msg.vb.v == Nil {
         forall p | p in pset && p.msg.Promise? 
         ensures p.msg.vb.b == Bottom
         {
             if p.msg.vb.b != Bottom {
                 assert BalGt(Bottom, p.msg.vb.b);
-                assert PromiseWithHighestBallot(pset).b != Bottom;
-                assert PromiseWithHighestBallot(pset).v != Nil;
+                assert PromisePktWithHighestBallot(pset).msg.vb.b != Bottom;
+                assert PromisePktWithHighestBallot(pset).msg.vb.v != Nil;
                 assert false;
             }
         }
     }
 }
 
-lemma lemma_PromiseWithHighestBallotProperty(pset:set<Packet>, p:Packet, v:Value)
+lemma lemma_PromisePktWithHighestBallotProperty(pset:set<Packet>, p:Packet, v:Value)
     requires |pset| > 0
     requires p.msg.Promise?
     requires p in pset;
     requires forall p' | p' in pset && p'.msg.Promise? && BalLtEq(p.msg.vb.b, p'.msg.vb.b) :: p'.msg.vb.v == v
-    ensures PromiseWithHighestBallot(pset).v == v
+    ensures PromisePktWithHighestBallot(pset).msg.vb.v == v
 {}
 
 lemma lemma_BalLtEqTransitivity(b1:Ballot, b2:Ballot, b3:Ballot) 
@@ -215,13 +215,12 @@ lemma lemma_BalLtTransitivity1(b1:Ballot, b2:Ballot, b3:Ballot)
 {}
 
 
-lemma lemma_SingleElemList<T>(s:seq<T>, e:T) 
+lemma {:axiom} lemma_SingleElemList<T>(s:seq<T>, e:T) 
     requires |s| == 1;
     requires e == s[0]
     ensures forall e' | e' in s :: e' == e
 {
     // This is axiomatic
-    assume false;
 }
 
 

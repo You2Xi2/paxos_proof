@@ -239,8 +239,8 @@ predicate LeaderP2ImpliesQuorumOfPromise(c:Constants, ds:DistrSys)
     var v := ds.leaders[idx].val;
     exists qrm  :: 
         && QuorumOfPromiseMsgs(c, ds, qrm, b)
-        && (|| PromiseWithHighestBallot(qrm).v == v
-            || PromiseWithHighestBallot(qrm).v == Nil
+        && (|| PromisePktWithHighestBallot(qrm).msg.vb.v == v
+            || PromisePktWithHighestBallot(qrm).msg.vb.v == Nil
         )
     )
 }
@@ -257,8 +257,8 @@ predicate ProposeMsgImpliesQuorumOfPromise(c:Constants, ds:DistrSys)
     var v := prop_p.msg.val;
     exists qrm  :: 
         && QuorumOfPromiseMsgs(c, ds, qrm, b)
-        && (|| PromiseWithHighestBallot(qrm).v == v
-            || PromiseWithHighestBallot(qrm).v == Nil
+        && (|| PromisePktWithHighestBallot(qrm).msg.vb.v == v
+            || PromisePktWithHighestBallot(qrm).msg.vb.v == Nil
         )
     )
 }
@@ -410,7 +410,7 @@ predicate LargerBallotPromiseMsgs(c:Constants, ds:DistrSys, b:Ballot, v:Value)
 predicate LargerBallotProposeMsgs(c:Constants, ds:DistrSys, b:Ballot, v:Value) 
     requires c.WF() && ds.WF(c)
 {
-    forall p | p in ds.network.sentPackets && p.msg.Propose? && BalLtEq(b, p.msg.bal)
+    forall p | isProposePkt(ds, p) && BalLtEq(b, p.msg.bal)
     :: p.msg.val == v
 }
 

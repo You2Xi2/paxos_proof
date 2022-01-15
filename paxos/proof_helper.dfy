@@ -168,6 +168,39 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 {}
 
 
+/* If a new value is chosen in this step, then Accept(actor, _, (b, v)) must be a new packet */
+lemma lemma_NewChosenImpliesNewAcceptPacket(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
+returns (p:Packet)
+    requires c.WF() && ds.WF(c) && ds'.WF(c)
+    requires AllPacketsValid(c, ds) && AllPacketsValid(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires recvIos[0].msg.Propose?
+    requires !Chosen(c, ds, b, v)
+    requires Chosen(c, ds', b, v)
+    ensures p == Packet(actor, recvIos[0].src, Accept(b, v))
+    ensures p !in ds.network.sentPackets && p in ds'.network.sentPackets
+{
+    p := Packet(actor, recvIos[0].src, Accept(b, v));
+}
+
+
+/* If this step is an AcceptorAccept step, then no new promises sent */
+lemma lemma_NoPromiseSentInAcceptStep(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires c.WF() && ds.WF(c) && ds'.WF(c)
+    requires AllPacketsValid(c, ds) && AllPacketsValid(c, ds')
+    requires Next(c, ds, ds')
+    requires c.ValidAccId(actor)
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires recvIos[0].msg.Propose?
+    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
+    ensures forall p | isPromisePkt(ds', p) :: p in ds.network.sentPackets
+{}
+
+
 
 
 /*****************************************************************************************

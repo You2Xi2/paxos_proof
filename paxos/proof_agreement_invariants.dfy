@@ -415,7 +415,7 @@ predicate LargerBallotProposeMsgs(c:Constants, ds:DistrSys, b:Ballot, v:Value)
 }
 
 /* If v is chosen with ballot b, then all Promise quorums for ballots
-* b' >= b must come from an acceptor that accepted (v, b) */
+* b' >= b must come from an acceptor that accepted (b, v) */
 predicate LargerBallotsPromiseQrms(c:Constants, ds:DistrSys, b:Ballot) 
     requires c.WF() && ds.WF(c)
 {

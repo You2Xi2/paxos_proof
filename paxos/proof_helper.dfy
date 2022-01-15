@@ -12,6 +12,10 @@ import opened Synod
 import opened Proof_Agreement_Invs
 
 
+/*****************************************************************************************
+*                                 Single State Helpers                                   *
+*****************************************************************************************/
+
 // lemma Lemma_DecidedImpliesQuorumOfAccepts(c:Constants, ds:DistrSys, idx:int) 
 //     requires c.WF() && ds.WF(c)
 //     requires c.ValidLdrIdx(idx) && LeaderHasDecided(c, ds, idx);
@@ -46,8 +50,6 @@ import opened Proof_Agreement_Invs
 //     assert QuorumOfAcceptMsgs(c, ds, qrm, b);
 // }
 
-
-
 lemma lemma_QuorumIntersection(c:Constants, ds:DistrSys, p1_qrm:set<Packet>, p1_bal:Ballot, p2_qrm:set<Packet>, p2_bal:Ballot)
 returns (acc_id:Id)
     requires c.WF() && ds.WF(c)
@@ -75,16 +77,43 @@ returns (acc_id:Id)
 }
 
 
-lemma lemma_Set_Intersection(S1:set<Id>, S2:set<Id>, U:set<Id>) returns (e:Id)
-    requires |S1| > |U|/2
-    requires |S2| > |U|/2
-    requires forall id | id in S1 :: id in U
-    requires forall id | id in S2 :: id in U
-    ensures e in U && e in S1 && e in S2
+/* If (b,v) is chosen, then there must be a quorum of Promise for b */
+lemma lemma_ChosenImpliesPromiseQrm(c:Constants, ds:DistrSys, b:Ballot, v:Value) returns (qrm:set<Packet>)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires Chosen(c, ds, b, v) 
+    ensures QuorumOfPromiseMsgs(c, ds, qrm, b)
 {
-    // TODO: assume for now
-    assume false;
+    assert exists q :: QuorumOfPromiseMsgs(c, ds, q, b);
+    qrm :| QuorumOfPromiseMsgs(c, ds, qrm, b);
 }
+
+
+/* If (b,v) is chosen, then is must have been proposed */
+lemma lemma_ChosenImpliesProposeMsg(c:Constants, ds:DistrSys, b:Ballot, v:Value) returns (prop:Packet)
+    requires c.WF() && ds.WF(c)
+    requires AllPacketsValid(c, ds)
+    requires Agreement_Chosen_Inv_Common(c, ds)
+    requires Chosen(c, ds, b, v) 
+    ensures prop in ds.network.sentPackets && prop.msg.Propose? 
+    ensures prop.msg.val == v && prop.msg.bal == b
+{
+    assert exists acc :: 
+            && acc in ds.network.sentPackets 
+            && acc.msg.Propose? 
+            && acc.msg.val == v && acc.msg.bal == b;
+    var acc :| acc in ds.network.sentPackets && acc.msg.Propose? && acc.msg.val == v && acc.msg.bal == b;
+    assert exists prop_p :: 
+        && prop_p in ds.network.sentPackets
+        && prop_p.msg.Propose?
+        && prop_p.msg.bal == b
+        && prop_p.msg.val == v;
+    prop :| prop in ds.network.sentPackets && prop.msg.Propose? && prop.msg.bal == b && prop.msg.val == v;
+}
+
+
+/*****************************************************************************************
+*                                  Two State Helpers                                     *
+*****************************************************************************************/
 
 
 /* If no new Accept messages sent in this step, then no new (b, v)'s are chosen. */
@@ -124,40 +153,6 @@ lemma lemma_NewPacketsComeFromSendIos(
 }
 
 
-/* If (b,v) is chosen, then there must be a quorum of Promise for b */
-lemma lemma_ChosenImpliesPromiseQrm(c:Constants, ds:DistrSys, b:Ballot, v:Value) returns (qrm:set<Packet>)
-    requires Agreement_Chosen_Inv(c, ds)
-    requires Chosen(c, ds, b, v) 
-    ensures QuorumOfPromiseMsgs(c, ds, qrm, b)
-{
-    assert exists q :: QuorumOfPromiseMsgs(c, ds, q, b);
-    qrm :| QuorumOfPromiseMsgs(c, ds, qrm, b);
-}
-
-
-/* If (b,v) is chosen, then is must have been proposed */
-lemma lemma_ChosenImpliesProposeMsg(c:Constants, ds:DistrSys, b:Ballot, v:Value) returns (prop:Packet)
-    requires c.WF() && ds.WF(c)
-    requires AllPacketsValid(c, ds)
-    requires Agreement_Chosen_Inv_Common(c, ds)
-    requires Chosen(c, ds, b, v) 
-    ensures prop in ds.network.sentPackets && prop.msg.Propose? 
-    ensures prop.msg.val == v && prop.msg.bal == b
-{
-    assert exists acc :: 
-            && acc in ds.network.sentPackets 
-            && acc.msg.Propose? 
-            && acc.msg.val == v && acc.msg.bal == b;
-    var acc :| acc in ds.network.sentPackets && acc.msg.Propose? && acc.msg.val == v && acc.msg.bal == b;
-    assert exists prop_p :: 
-        && prop_p in ds.network.sentPackets
-        && prop_p.msg.Propose?
-        && prop_p.msg.bal == b
-        && prop_p.msg.val == v;
-    prop :| prop in ds.network.sentPackets && prop.msg.Propose? && prop.msg.bal == b && prop.msg.val == v;
-}
-
-
 /* If a new value is chosen in this step, then this step must be an AcceptorAccept step */
 lemma lemma_NewChosenImpliesAcceptStep(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
@@ -171,6 +166,13 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     ensures recvIos[0].msg.Propose?
     ensures AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos)   
 {}
+
+
+
+
+/*****************************************************************************************
+*                                  Stateless Helpers                                     *
+*****************************************************************************************/
 
 
 lemma lemma_HighestPromiseValNilImpliesAllBottom(pset:set<Packet>) 
@@ -201,6 +203,12 @@ lemma lemma_PromisePktWithHighestBallotProperty(pset:set<Packet>, p:Packet, v:Va
     ensures PromisePktWithHighestBallot(pset).msg.vb.v == v
 {}
 
+lemma lemma_NegBalLtEqSynonyms(b1:Ballot, b2:Ballot) 
+    requires !BalLtEq(b1, b2)
+    ensures BalGt(b1, b2)
+    ensures BalLt(b2, b1)
+{}
+
 lemma lemma_BalLtEqTransitivity(b1:Ballot, b2:Ballot, b3:Ballot) 
     requires BalLtEq(b1, b2)
     requires BalLtEq(b2, b3)
@@ -221,6 +229,18 @@ lemma {:axiom} lemma_SingleElemList<T>(s:seq<T>, e:T)
     ensures forall e' | e' in s :: e' == e
 {
     // This is axiomatic
+}
+
+
+lemma lemma_Set_Intersection(S1:set<Id>, S2:set<Id>, U:set<Id>) returns (e:Id)
+    requires |S1| > |U|/2
+    requires |S2| > |U|/2
+    requires forall id | id in S1 :: id in U
+    requires forall id | id in S2 :: id in U
+    ensures e in U && e in S1 && e in S2
+{
+    // TODO: assume for now
+    assume false;
 }
 
 

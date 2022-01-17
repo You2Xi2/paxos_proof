@@ -226,9 +226,15 @@ predicate QuorumOfAcceptMsgs(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot
     requires c.WF()
 {
     && |qrm| >= c.f + 1
-    && UniqueSources(qrm)
-    // && SameDest(qrm)
-    && (forall p | p in qrm :: 
+    && SetOfAcceptMsgs(c, ds, qrm, b)
+}
+
+/* S is a set of accept messages with ballot b, value v */
+predicate SetOfAcceptMsgs(c:Constants, ds:DistrSys, S:set<Packet>, b:Ballot) 
+    requires c.WF()
+{
+    && UniqueSources(S)
+    && (forall p | p in S :: 
             && isAcceptPkt(ds, p)
             && p.msg.bal == b
     )

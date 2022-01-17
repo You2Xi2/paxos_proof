@@ -50,6 +50,24 @@ import opened Proof_Agreement_Invs
 //     assert QuorumOfAcceptMsgs(c, ds, qrm, b);
 // }
 
+
+lemma lemma_IdSetCover(c:Constants, ds:DistrSys, qrm1:set<Id>, qrm2:set<Id>, e:Id)
+    requires c.WF() && ds.WF(c)
+    requires AllPacketsValid(c, ds)
+    requires forall id | id in qrm1 :: c.ValidAccId(id)
+    requires forall id | id in qrm2 :: c.ValidAccId(id)
+    requires c.ValidAccId(e)
+    requires qrm1 * qrm2 == {}  // disjoint
+    requires |qrm1| + |qrm2| >= 2*c.f+1
+    ensures e in qrm1 || e in qrm2
+{
+    var acc_ids := setFromSeq(c.acc_ids);
+    assert e in acc_ids;
+    lemma_Set_Cover(qrm1, qrm2, acc_ids);
+}
+
+
+
 lemma lemma_QuorumIntersection(c:Constants, ds:DistrSys, p1_qrm:set<Packet>, p1_bal:Ballot, p2_qrm:set<Packet>, p2_bal:Ballot)
 returns (acc_id:Id)
     requires c.WF() && ds.WF(c)
@@ -168,12 +186,13 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 {}
 
 
-/* If a new value is chosen in this step, then Accept(actor, _, (b, v)) must be a new packet */
-lemma lemma_NewChosenImpliesNewAcceptPacket(
+/* If a new value is chosen in this step, then Accept(actor, _, (b, v)) must be the only new packet */
+lemma lemma_NewChosenImpliesOneNewAcceptPacket(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
 returns (p:Packet)
     requires c.WF() && ds.WF(c) && ds'.WF(c)
     requires AllPacketsValid(c, ds) && AllPacketsValid(c, ds')
+    requires OneValuePerBallot_AcceptMsg(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
@@ -182,9 +201,38 @@ returns (p:Packet)
     requires Chosen(c, ds', b, v)
     ensures p == Packet(actor, recvIos[0].src, Accept(b, v))
     ensures p !in ds.network.sentPackets && p in ds'.network.sentPackets
+    ensures forall p' | p' in ds'.network.sentPackets && p' != p :: p' in ds.network.sentPackets
+    ensures forall qrm | QuorumOfAcceptMsgs(c, ds', qrm, b) :: p in qrm
 {
     p := Packet(actor, recvIos[0].src, Accept(b, v));
+    assert p in ds'.network.sentPackets;
+    forall qrm | QuorumOfAcceptMsgs(c, ds', qrm, b) 
+    ensures p in qrm
+    {
+        if p !in qrm {
+            assert QuorumOfAcceptMsgs(c, ds, qrm, b);
+            assert AccPacketsHaveValueV(qrm, v);
+            assert Chosen(c, ds, b, v);
+            assert false;
+        }
+    }
 }
+
+
+/* If a new value (b, v) is chosen in this step, the incoming proposal must have ballot b and value v */
+lemma lemma_NewChosenImpliesIncomingProposalBV(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
+    requires c.WF() && ds.WF(c) && ds'.WF(c)
+    requires AllPacketsValid(c, ds) && AllPacketsValid(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires recvIos[0].msg.Propose?
+    requires !Chosen(c, ds, b, v)
+    requires Chosen(c, ds', b, v)
+    ensures recvIos[0].msg.bal == b
+    ensures recvIos[0].msg.val == v
+{}
 
 
 /* If this step is an AcceptorAccept step, then no new promises sent */
@@ -242,6 +290,12 @@ lemma lemma_NegBalLtEqSynonyms(b1:Ballot, b2:Ballot)
     ensures BalLt(b2, b1)
 {}
 
+lemma lemma_BalLtSynonyms(b1:Ballot, b2:Ballot) 
+    requires BalLt(b1, b2)
+    ensures BalGt(b2, b1)
+    ensures !BalLtEq(b2, b1)
+{}
+
 lemma lemma_BalLtEqTransitivity(b1:Ballot, b2:Ballot, b3:Ballot) 
     requires BalLtEq(b1, b2)
     requires BalLtEq(b2, b3)
@@ -265,6 +319,25 @@ lemma {:axiom} lemma_SingleElemList<T>(s:seq<T>, e:T)
 }
 
 
+lemma {:axiom} lemma_Set_Cover<T>(S1:set<T>, S2:set<T>, U:set<T>)
+    requires S1 <= U 
+    requires S2 <= U
+    requires S1 * S2 == {}
+    requires |S1| + |S2| >= |U|
+    ensures S1 + S2 == U
+{
+    // This is axiomatic
+    assume false;
+}
+
+lemma {:axiom} lemma_Set_DisjointSets<T>(S1:set<T>, S2:set<T>)
+    requires forall e | e in S1 :: e !in S2
+    ensures S1 * S2 == {}
+{
+    // This is axiomatic
+}
+
+
 lemma lemma_Set_Intersection(S1:set<Id>, S2:set<Id>, U:set<Id>) returns (e:Id)
     requires |S1| > |U|/2
     requires |S2| > |U|/2
@@ -276,6 +349,12 @@ lemma lemma_Set_Intersection(S1:set<Id>, S2:set<Id>, U:set<Id>) returns (e:Id)
     assume false;
 }
 
+
+lemma lemma_Set_MinusElem<T>(S:set<T>, e:T, n:int) 
+    requires |S| == n && n > 0
+    requires e in S
+    ensures |S - {e}| == n - 1
+{}
 
 
 /*****************************************************************************************

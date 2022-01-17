@@ -140,7 +140,7 @@ predicate OneValuePerBallot_AcceptMsg(c:Constants, ds:DistrSys)
         && isAcceptPkt(ds, acc_p1) && isAcceptPkt(ds, acc_p2)
         && acc_p1.msg.bal == acc_p2.msg.bal
     :: 
-        acc_p1.msg.val == acc_p1.msg.val
+        acc_p1.msg.val == acc_p2.msg.val
 }
 
 predicate OneValuePerBallot_ProposeMsgAndLeader(c:Constants, ds:DistrSys) 

@@ -107,9 +107,10 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     assume AccPromisedBallotLargerThanAccepted(c, ds');     // TODO
 
     // Messages
+    assume PromiseMsgBalLargerThanAcceptedItSees(c, ds');   // TODO
     assume PromiseVBImpliesAcceptMsg(c, ds');               // TODO
     assume AcceptMsgImpliesAccepted(c, ds');                // TODO
-    assume AcceptedImpliesAcceptMsg(c, ds');            // TODO
+    assume AcceptedImpliesAcceptMsg(c, ds');                // TODO
     assume AcceptMsgImpliesProposeMsg(c, ds');              // TODO
     assume LeaderP2ImpliesQuorumOfPromise(c, ds');          // TODO
     assume ProposeMsgImpliesQuorumOfPromise(c, ds');        // TODO
@@ -144,9 +145,12 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotsPromiseQrms(c, ds, ds', actor, recvIos, sendIos, b, v);
     assert LargerBallotsPromiseQrms(c, ds', b);  
 
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
+    assert LargerBallotAcceptMsgs(c, ds', b, v);     // TODO: we need this
     
     assume LargerBallotAcceptors(c, ds', b, v);     // TODO: we need this
-    assume LargerBallotAcceptMsgs(c, ds', b, v);     // TODO: we need this
+
+    
 
 
     // Done
@@ -189,7 +193,14 @@ lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotsPromiseQrm
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, b':Ballot, qrm':set<Packet>, v:Value)
     requires Agreement_Chosen_Inv(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
-    requires Agreement_Chosen_Inv_Common(c, ds')
+    // Picking individual items from Agreement_Chosen_Inv_Common, faster verification
+    requires Agreement_Chosen(c, ds') 
+    requires OneValuePerBallot(c, ds')
+    requires PromiseMsgImpliesPromised(c, ds')
+    requires PromisedImpliesNoMoreAccepts(c, ds')
+    requires AccPromisedBallotLargerThanAccepted(c, ds')
+    requires AcceptMsgImpliesAccepted(c, ds')
+
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
@@ -246,7 +257,6 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
             }
         }
         lemma_Set_DisjointSets(accs_that_promised, accs_that_accepted);
-
         // Consider the current actor taking a step
         lemma_IdSetCover(c, ds, accs_that_promised, accs_that_accepted, actor);
         if actor in accs_that_promised {
@@ -263,6 +273,103 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
             assert ds'.network.sentPackets == ds.network.sentPackets;
             assert false;       // violates lemma_NewChosenImpliesOneNewAcceptPacket
         }
+    }
+}
+
+
+lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_Common(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires recvIos[0].msg.Propose?
+    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
+    requires !SomeValueChosen(c, ds)
+    requires Chosen(c, ds', b, v)
+    requires LargerBallotsPromiseQrms(c, ds', b);  
+    ensures LargerBallotAcceptMsgs(c, ds', b, v);
+{
+    forall accpt | isAcceptPkt(ds', accpt) && BalLtEq(b, accpt.msg.bal)
+    ensures accpt.msg.val == v
+    {
+        AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs_helper(c, ds, ds', 
+            actor, recvIos, sendIos, b, v, accpt, accpt.msg.bal, accpt.msg.val);
+    }
+}
+
+
+lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs_helper(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value,
+accpt:Packet, b1:Ballot, v':Value)
+    decreases b1
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    // Picking individual items from Agreement_Chosen_Inv_Common, faster verification
+    requires Agreement_Chosen(c, ds') 
+    requires OneValuePerBallot(c, ds')
+    requires AcceptMsgImpliesProposeMsg(c, ds')
+    requires ProposeMsgImpliesQuorumOfPromise(c, ds')
+    requires PromiseVBImpliesAcceptMsg(c, ds')
+    requires PromiseMsgBalLargerThanAcceptedItSees(c, ds')
+
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires recvIos[0].msg.Propose?
+    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
+    requires !SomeValueChosen(c, ds)
+    requires Chosen(c, ds', b, v)
+    requires LargerBallotsPromiseQrms(c, ds', b);  
+    requires isAcceptPkt(ds', accpt) && BalLtEq(b, accpt.msg.bal)
+    requires b1 == accpt.msg.bal
+    requires v' == accpt.msg.val
+    ensures accpt.msg.val == v
+{
+    /* Consider accpt Accept(b1, v') message, b1 >b. By AcceptMsgImpliesProposeMsg, there is a Propose(b1, v') in the network.
+    * By ProposeMsgImpliesQuorumOfPromise, there is a quorum qrm1 of promise b1 packets, such that 
+    * PromisePktWithHighestBallot(qrm1).msg.vb.v == v'. By LargerBallotsPromiseQrms, qrm1 must also see (b, v).
+    * There are now two cases:
+    *   1. PromisePktWithHighestBallot(qrm1).msg.vb.b == b. Then we are done, by OneValuePerBallot.
+    *   2. PromisePktWithHighestBallot(qrm1).msg.vb.b == b2. By PromiseMsgBalLargerThanAcceptedItSees, b2 < b1.
+    *          I.e. b < b2 < b1.
+    * This means that there is a Accept(b2, v') message. And we go down recursively. 
+    * Since there are finite number of ballots (say, i) between b1 and b, after i iterations of step 2, 
+    * we must hit b eventually, and QED.
+    */
+    var b1, v' := accpt.msg.bal, accpt.msg.val;
+    if b1 == b {
+        var chosen_qrm_member :|    && isAcceptPkt(ds', chosen_qrm_member)
+                                    && chosen_qrm_member.msg.bal == b
+                                    && chosen_qrm_member.msg.val == v;
+        assert chosen_qrm_member.msg.val == accpt.msg.val;  // by OneValuePerBallot_AcceptMsg
+    } else {
+        var prop1 :| isProposePkt(ds', prop1) && prop1.msg == Propose(b1, v');
+        var qrm1 :| QuorumOfPromiseMsgs(c, ds', qrm1, b1)
+                    && (|| PromisePktWithHighestBallot(qrm1).msg.vb.v == v'
+                        || PromisePktWithHighestBallot(qrm1).msg.vb.v == Nil);
+        var prom1 := PromisePktWithHighestBallot(qrm1);
+        // The highest ballot in qrm1 is not Nil
+        if prom1.msg.vb.v == Nil {
+            lemma_HighestPromiseValNilImpliesAllBottom(qrm1);
+            assert !QuorumHasSeenB(c, ds', qrm1, b);
+            assert false;
+        }
+        assert isPromisePkt(ds', prom1) && prom1.msg.vb.b != Bottom;
+
+        // Establish b <= b2 < b1
+        var b2 := prom1.msg.vb.b;
+        var b_witness:Packet :| b_witness in qrm1 && BalLtEq(b, b_witness.msg.vb.b);    // by LargerBallotsPromiseQrms
+        lemma_BalLtEqTransitivity(b, b_witness.msg.vb.b, b2);
+        assert BalLtEq(b, b2);
+        assert BalLt(b2, b1);       // by PromiseMsgBalLargerThanAcceptedItSees
+
+        // Fetch Accept packet corresponding to balval seen by prom1
+        var accpt2 :|   && isAcceptPkt(ds', accpt2)      // by PromiseVBImpliesAcceptMsg
+                        && accpt2.msg == Accept(b2, v');
+        BallotInductionAxiom1(c, ds', accpt, b, v);
     }
 }
 

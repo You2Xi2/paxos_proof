@@ -71,6 +71,7 @@ predicate Agreement_Chosen_Inv_Common(c:Constants, ds:DistrSys)
     && AcceptMsgImpliesAccepted(c, ds)
 
     // Messages
+    && PromiseMsgBalLargerThanAcceptedItSees(c, ds)
     && PromiseVBImpliesAcceptMsg(c, ds)
     && PromisedImpliesNoMoreAccepts(c, ds)
     && ProposeMsgImpliesQuorumOfPromise(c, ds)
@@ -156,6 +157,15 @@ predicate OneValuePerBallot_ProposeMsgAndLeader(c:Constants, ds:DistrSys)
 }
 
 
+/* For each promise message Promise(b', (b, v)), we have b' > b */
+predicate PromiseMsgBalLargerThanAcceptedItSees(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall prom_p | isPromisePkt(ds, prom_p)
+    :: BalLt(prom_p.msg.vb.b, prom_p.msg.bal)
+}
+
+
 /* For each promise message p, if it contains an accepted (v, b), then there is an 
 * Accept(b) in the network from the same source */
 predicate PromiseVBImpliesAcceptMsg(c:Constants, ds:DistrSys) 
@@ -168,8 +178,8 @@ predicate PromiseVBImpliesAcceptMsg(c:Constants, ds:DistrSys)
     (exists acc_p :: 
         && isAcceptPkt(ds, acc_p)
         && acc_p.src == prom_p.src
-        && acc_p.msg.bal == prom_p.msg.vb.b
-        && acc_p.msg.val == prom_p.msg.vb.v)
+        && acc_p.msg == Accept(prom_p.msg.vb.b, prom_p.msg.vb.v)
+    )
 }
 
 /* If an Promise msg in network with ballot b, then acceptor x 
@@ -222,8 +232,7 @@ predicate AcceptMsgImpliesProposeMsg(c:Constants, ds:DistrSys)
         && isProposePkt(ds, prop_p)
         && prop_p.src == ldr
         && prop_p.dst == acc
-        && prop_p.msg.bal == b
-        && prop_p.msg.val == v
+        && prop_p.msg == Propose(b, v)
     )
 }
 

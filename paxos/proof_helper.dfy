@@ -247,8 +247,16 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires c.ValidAccId(actor)
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires recvIos[0].msg.Propose?
-    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
+    // requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
     ensures forall p | isPromisePkt(ds', p) :: p in ds.network.sentPackets
+{}
+
+
+/* SentPackets set is a monotone increasing set */
+lemma lemma_NetworkMonotoneIncreasing(c:Constants, ds:DistrSys, ds':DistrSys) 
+    requires c.WF() && ds.WF(c) && ds'.WF(c)
+    requires Next(c, ds, ds')
+    ensures ds.network.sentPackets <= ds'.network.sentPackets
 {}
 
 
@@ -308,6 +316,13 @@ lemma lemma_BalLtEqTransitivity(b1:Ballot, b2:Ballot, b3:Ballot)
 lemma lemma_BalLtTransitivity1(b1:Ballot, b2:Ballot, b3:Ballot) 
     requires BalLt(b1, b2)
     requires BalLtEq(b2, b3)
+    ensures BalLt(b1, b3)
+    ensures BalGt(b3, b1)
+{}
+
+lemma lemma_BalLtTransitivity2(b1:Ballot, b2:Ballot, b3:Ballot) 
+    requires BalLtEq(b1, b2)
+    requires BalLt(b2, b3)
     ensures BalLt(b1, b3)
     ensures BalGt(b3, b1)
 {}

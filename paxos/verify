@@ -1,7 +1,7 @@
 #!/bin/bash -li
 
-dafny="/usr/local/lib/dafny/dafny /timeLimit:20 /compile:0  /allowGlobals /noNLarith /autoTriggers:1"
-dafnylong="/usr/local/lib/dafny/dafny /timeLimit:40 /compile:0  /allowGlobals /noNLarith /autoTriggers:1"
+dafny="/usr/local/lib/dafny/dafny /timeLimit:20 /compile:0  /allowGlobals /noNLarith /autoTriggers:1 /vcsCores:3"
+dafnylong="/usr/local/lib/dafny/dafny /timeLimit:40 /compile:0  /allowGlobals /noNLarith /autoTriggers:1 /vcsCores:3"
 
 
 ### Definition Files 
@@ -18,6 +18,10 @@ $dafny proof_validity.dfy
 echo ""
 echo "Verifying proof_agreement_invariants.dfy"
 $dafny proof_agreement_invariants.dfy
+
+echo ""
+echo "Verifying proof_axioms.dfy"
+$dafny proof_axioms.dfy
 
 echo ""
 echo "Verifying proof_helper.dfy"

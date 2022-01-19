@@ -2,6 +2,7 @@ include "types.dfy"
 include "network.dfy"
 include "agents.dfy"
 include "synod.dfy"
+include "proof_axioms.dfy"
 include "proof_agreement_invariants.dfy"
 
 module Proof_Helper {
@@ -9,6 +10,7 @@ import opened Network
 import opened Agents
 import opened Types
 import opened Synod
+import opened Proof_Axioms
 import opened Proof_Agreement_Invs
 
 
@@ -63,7 +65,7 @@ lemma lemma_IdSetCover(c:Constants, ds:DistrSys, qrm1:set<Id>, qrm2:set<Id>, e:I
 {
     var acc_ids := setFromSeq(c.acc_ids);
     assert e in acc_ids;
-    lemma_Set_Cover(qrm1, qrm2, acc_ids);
+    axiom_Set_Cover(qrm1, qrm2, acc_ids);
 }
 
 
@@ -87,7 +89,7 @@ returns (acc_id:Id)
         assert seqIsUnique(c.acc_ids);
         var acc_ids := setFromSeq(c.acc_ids);
         assert |acc_ids| == 2*c.f+1;
-        var e := lemma_Set_Intersection(p1_src_qrm, p2_src_qrm, acc_ids);
+        var e := axiom_Set_Intersection(p1_src_qrm, p2_src_qrm, acc_ids);
         assert e in acc_ids && e in p1_src_qrm && e in p2_src_qrm;
         assert false;
     }
@@ -128,23 +130,6 @@ lemma lemma_ChosenImpliesProposeMsg(c:Constants, ds:DistrSys, b:Ballot, v:Value)
     prop :| prop in ds.network.sentPackets && prop.msg.Propose? && prop.msg.bal == b && prop.msg.val == v;
 }
 
-
-
-lemma {:axiom} BallotInductionAxiom1(c:Constants, ds:DistrSys, accpt:Packet, b:Ballot, v:Value) 
-    requires c.WF() && ds.WF(c)
-    requires isAcceptPkt(ds, accpt)
-    requires BalLtEq(b, accpt.msg.bal)
-    requires accpt.msg.bal == b ==>  accpt.msg.val == v
-    requires BalLt(b, accpt.msg.bal) ==> 
-        (exists accpt2:Packet :: 
-            && isAcceptPkt(ds, accpt2) 
-            && BalLtEq(b, accpt2.msg.bal) && BalLt(accpt2.msg.bal, accpt.msg.bal)
-            && accpt2.msg.val == accpt.msg.val)
-    ensures accpt.msg.val == v
-{
-    assume false;
-    // This is axiomatic
-}
 
 
 /*****************************************************************************************
@@ -328,44 +313,11 @@ lemma lemma_BalLtTransitivity1(b1:Ballot, b2:Ballot, b3:Ballot)
 {}
 
 
-lemma {:axiom} lemma_SingleElemList<T>(s:seq<T>, e:T) 
+lemma lemma_SingleElemList<T>(s:seq<T>, e:T) 
     requires |s| == 1;
     requires e == s[0]
     ensures forall e' | e' in s :: e' == e
-{
-    // This is axiomatic
-}
-
-
-lemma {:axiom} lemma_Set_Cover<T>(S1:set<T>, S2:set<T>, U:set<T>)
-    requires S1 <= U 
-    requires S2 <= U
-    requires S1 * S2 == {}
-    requires |S1| + |S2| >= |U|
-    ensures S1 + S2 == U
-{
-    // This is axiomatic
-    assume false;
-}
-
-lemma {:axiom} lemma_Set_DisjointSets<T>(S1:set<T>, S2:set<T>)
-    requires forall e | e in S1 :: e !in S2
-    ensures S1 * S2 == {}
-{
-    // This is axiomatic
-}
-
-
-lemma lemma_Set_Intersection(S1:set<Id>, S2:set<Id>, U:set<Id>) returns (e:Id)
-    requires |S1| > |U|/2
-    requires |S2| > |U|/2
-    requires forall id | id in S1 :: id in U
-    requires forall id | id in S2 :: id in U
-    ensures e in U && e in S1 && e in S2
-{
-    // TODO: assume for now
-    assume false;
-}
+{}
 
 
 lemma lemma_Set_MinusElem<T>(S:set<T>, e:T, n:int) 

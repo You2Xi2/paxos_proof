@@ -3,6 +3,7 @@ include "network.dfy"
 include "agents.dfy"
 include "synod.dfy"
 include "proof_helper.dfy"
+include "proof_axioms.dfy"
 include "proof_agreement_invariants.dfy"
 
 module Proof_Agreement {
@@ -11,6 +12,7 @@ import opened Agents
 import opened Types
 import opened Synod
 import opened Proof_Helper
+import opened Proof_Axioms
 import opened Proof_Agreement_Invs
 
 
@@ -242,7 +244,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
                 }
             }
         }
-        lemma_Set_DisjointSets(accs_that_promised, accs_that_accepted);
+        axiom_Set_DisjointSets(accs_that_promised, accs_that_accepted);
         // Consider the current actor taking a step
         lemma_IdSetCover(c, ds, accs_that_promised, accs_that_accepted, actor);
         if actor in accs_that_promised {
@@ -355,7 +357,7 @@ accpt:Packet, b1:Ballot, v':Value)
         // Fetch Accept packet corresponding to balval seen by prom1
         var accpt2 :|   && isAcceptPkt(ds', accpt2)      // by PromiseVBImpliesAcceptMsg
                         && accpt2.msg == Accept(b2, v');
-        BallotInductionAxiom1(c, ds', accpt, b, v);
+        axiom_BallotInduction1(c, ds', accpt, b, v);
     }
 }
 

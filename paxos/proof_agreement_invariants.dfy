@@ -23,7 +23,7 @@ predicate Agreement(c:Constants, ds:DistrSys)
 
 
 /* Only one value can be chosen */
-predicate Agreement_Chosen(c:Constants, ds:DistrSys) 
+predicate Agreement_Chosen_Safety(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
     requires AllPacketsValid(c, ds)
 {
@@ -48,9 +48,13 @@ predicate Agreement_Chosen_Inv(c:Constants, ds:DistrSys)
     && Trivialities(c, ds)
     && Agreement_Chosen_Inv_Common(c, ds)
     // Chosen
-    && (forall b, v | Chosen(c, ds, b, v) 
+    && Agreement_Chosen_Inv_ChosenProperties(c, ds)
+    && Agreement_Chosen_Safety(c, ds)
+}
+
+predicate Agreement_Chosen_Inv_ChosenProperties(c:Constants, ds:DistrSys) {
+    forall b, v | Chosen(c, ds, b, v) 
         :: Agreement_Chosen_Inv_SomeValChosen(c, ds, b, v)
-    )
 }
 
 /* Things that are always true */
@@ -58,7 +62,6 @@ predicate Agreement_Chosen_Inv_Common(c:Constants, ds:DistrSys)
     requires c.WF() && ds.WF(c)
     requires AllPacketsValid(c, ds)
 {
-    && Agreement_Chosen(c, ds)
     && OneValuePerBallot(c, ds)
 
     // Leader state

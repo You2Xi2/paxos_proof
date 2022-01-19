@@ -143,25 +143,11 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
 {
     AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotsPromiseQrms(c, ds, ds', actor, recvIos, sendIos, b, v);
-    assert LargerBallotsPromiseQrms(c, ds', b);  
-
     AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
-    assert LargerBallotAcceptMsgs(c, ds', b, v);     // TODO: we need this
-    
-    assume LargerBallotAcceptors(c, ds', b, v);     // TODO: we need this
-
-    
-
-
-    // Done
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptors(c, ds, ds', actor, recvIos, sendIos, b, v);
     AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
     AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
     AgreementChosenInv_NoneChosen_AccAction_NewChosenV_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b, v);
-    assert LargerBallotPromiseMsgs(c, ds', b, v);  
-    assert LargerBallotProposeMsgs(c, ds', b, v);
-    assert LargerBallotPhase2LeadersV(c, ds', b, v);
-
-    assert Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v); 
 }
 
 
@@ -205,7 +191,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
     requires recvIos[0].msg.Propose?
-    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
+    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos)   
     requires !SomeValueChosen(c, ds)
     requires Chosen(c, ds', b, v)
     requires BalLt(b, b') 
@@ -286,11 +272,11 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
     requires recvIos[0].msg.Propose?
-    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
+    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos)   
     requires !SomeValueChosen(c, ds)
     requires Chosen(c, ds', b, v)
-    requires LargerBallotsPromiseQrms(c, ds', b);  
-    ensures LargerBallotAcceptMsgs(c, ds', b, v);
+    requires LargerBallotsPromiseQrms(c, ds', b)
+    ensures LargerBallotAcceptMsgs(c, ds', b, v)
 {
     forall accpt | isAcceptPkt(ds', accpt) && BalLtEq(b, accpt.msg.bal)
     ensures accpt.msg.val == v
@@ -319,10 +305,10 @@ accpt:Packet, b1:Ballot, v':Value)
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
     requires recvIos[0].msg.Propose?
-    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
+    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos)
     requires !SomeValueChosen(c, ds)
     requires Chosen(c, ds', b, v)
-    requires LargerBallotsPromiseQrms(c, ds', b);  
+    requires LargerBallotsPromiseQrms(c, ds', b)
     requires isAcceptPkt(ds', accpt) && BalLtEq(b, accpt.msg.bal)
     requires b1 == accpt.msg.bal
     requires v' == accpt.msg.val
@@ -370,6 +356,34 @@ accpt:Packet, b1:Ballot, v':Value)
         var accpt2 :|   && isAcceptPkt(ds', accpt2)      // by PromiseVBImpliesAcceptMsg
                         && accpt2.msg == Accept(b2, v');
         BallotInductionAxiom1(c, ds', accpt, b, v);
+    }
+}
+
+
+lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptors(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_Common(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires recvIos[0].msg.Propose?
+    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
+    requires !SomeValueChosen(c, ds)
+    requires Chosen(c, ds', b, v)
+    requires LargerBallotsPromiseQrms(c, ds', b)
+    requires LargerBallotAcceptMsgs(c, ds', b, v)
+    ensures LargerBallotAcceptors(c, ds', b, v)
+{
+    forall i' | c.ValidAccIdx(i') && BalLtEq(b, ds'.acceptors[i'].accepted.b)
+    ensures AcceptorHasValueV(c, ds', i', v) {
+        var b', v' :=  ds'.acceptors[i'].accepted.b, ds'.acceptors[i'].accepted.v;
+        if v' != v {
+            var accp :| && isAcceptPkt(ds', accp)   // by AcceptedImpliesAcceptMsg
+                        && accp.msg == Accept(b', v');
+            assert false;   // violtes LargerBallotAcceptMsgs
+        }
     }
 }
 

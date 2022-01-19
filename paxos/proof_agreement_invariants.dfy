@@ -210,10 +210,8 @@ predicate AcceptedImpliesAcceptMsg(c:Constants, ds:DistrSys)
         && ds.acceptors[idx].accepted.b != Bottom
     :: (
     exists p ::
-        && p in ds.network.sentPackets 
-        && p.msg.Accept?
-        && p.msg.bal == ds.acceptors[idx].accepted.b
-        && p.msg.val == ds.acceptors[idx].accepted.v
+        && isAcceptPkt(ds, p)
+        && p.msg == Accept(ds.acceptors[idx].accepted.b, ds.acceptors[idx].accepted.v)
         && p.src == Id(Acc, idx)
     )
 }

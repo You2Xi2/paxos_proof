@@ -55,13 +55,130 @@ lemma NextPreservesAgreementChosenInv(c:Constants, ds:DistrSys, ds':DistrSys)
     ensures Agreement_Chosen_Inv(c, ds')
 {
     NextPreservesTrivialities(c, ds, ds');
+    AgreementChosenInv_Common(c, ds, ds');
+
     if SomeValueChosen(c, ds) {
         // TODO
         assume false;
     } else {
-        // TODO
         AgreementChosenInv_NoneChosen(c, ds, ds');
     }
+}
+
+// //////////////          Agreement Sub-Lemma: Common Invariants          ///////////////
+
+lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    ensures Agreement_Chosen_Inv_Common(c, ds')
+{
+    assume false;
+    var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
+    AgreementChosenInv_NoneChosen_AccAction_AgreementChosen(c, ds, ds', actor, recvIos, sendIos);
+    lemma_NetworkMonotoneIncreasing(c, ds, ds');
+    
+    // Leader state
+    assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');   
+    assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
+
+    // Acceptor state
+    assert AccPromisedBallotLargerThanAccepted(c, ds');    
+
+    // Messages
+    AgreementChosenInv_NoneChosen_AccAction_PromiseMsgBalLargerThanAcceptedItSees(c, ds, ds', actor, recvIos, sendIos);
+    assert PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
+
+    AgreementChosenInv_NoneChosen_AccAction_PromiseVBImpliesAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
+    assert PromiseVBImpliesAcceptMsg(c, ds');             
+
+
+    assume AcceptMsgImpliesAccepted(c, ds');                // TODO
+    assume AcceptedImpliesAcceptMsg(c, ds');                // TODO
+    assume AcceptMsgImpliesProposeMsg(c, ds');              // TODO
+    assume LeaderP2ImpliesQuorumOfPromise(c, ds');          // TODO
+    assume ProposeMsgImpliesQuorumOfPromise(c, ds');        // TODO
+    assume PromisedImpliesNoMoreAccepts(c, ds');            // TODO
+
+
+    AgreementChosenInv_NoneChosen_AccAction_OneValuePerBallot(c, ds, ds', actor, recvIos, sendIos);
+    assert OneValuePerBallot(c, ds');
+}
+
+
+lemma AgreementChosenInv_NoneChosen_AccAction_PromiseMsgBalLargerThanAcceptedItSees(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    // requires c.ValidAccId(actor)
+    requires !SomeValueChosen(c, ds)
+    ensures PromiseMsgBalLargerThanAcceptedItSees(c, ds')
+{
+    assume false;
+    var a, a' := ds.acceptors[actor.idx], ds'.acceptors[actor.idx];
+    if recvIos[0].msg.Prepare? {
+        lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
+        if BalLt(a.promised, recvIos[0].msg.bal) {
+            assert BalLtEq(a.accepted.b, a.promised);
+            var newProm := sendIos[0];
+            assert newProm.msg.bal == recvIos[0].msg.bal && newProm.msg.vb.b == a.accepted.b;
+            lemma_BalLtTransitivity2(newProm.msg.vb.b, a.promised, newProm.msg.bal);
+            lemma_SingleElemList(sendIos, newProm);
+        } 
+    } else {
+        lemma_NoPromiseSentInAcceptStep(c, ds, ds', actor, recvIos, sendIos);
+    }
+}
+
+
+lemma AgreementChosenInv_NoneChosen_AccAction_PromiseVBImpliesAcceptMsg(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    // requires c.ValidAccId(actor)
+    requires !SomeValueChosen(c, ds)
+    ensures PromiseVBImpliesAcceptMsg(c, ds')
+{
+    assume false;
+    var a, a' := ds.acceptors[actor.idx], ds'.acceptors[actor.idx];
+    if recvIos[0].msg.Prepare? {
+        assume false;
+        // lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
+        // if BalLt(a.promised, recvIos[0].msg.bal) {
+        //     assert BalLtEq(a.accepted.b, a.promised);
+        //     var newProm := sendIos[0];
+        //     assert newProm.msg.bal == recvIos[0].msg.bal && newProm.msg.vb.b == a.accepted.b;
+        //     lemma_BalLtTransitivity2(newProm.msg.vb.b, a.promised, newProm.msg.bal);
+        //     lemma_SingleElemList(sendIos, newProm);
+        // } 
+    } else {
+        lemma_NoPromiseSentInAcceptStep(c, ds, ds', actor, recvIos, sendIos);
+    }
+}
+
+
+lemma AgreementChosenInv_NoneChosen_AccAction_OneValuePerBallot(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires AcceptMsgImpliesProposeMsg(c, ds');
+    requires PromiseVBImpliesAcceptMsg(c, ds');
+    // requires c.ValidAccId(actor)
+    requires !SomeValueChosen(c, ds)
+    ensures OneValuePerBallot(c, ds')
+{
+    assume false;
+    // assert OneValuePerBallot_Leaders(c, ds');
+    // assert OneValuePerBallot_ProposeMsg(c, ds');
+    // assert OneValuePerBallot_AcceptMsg(c, ds');
+    // assert OneValuePerBallot_PromiseMsg(c, ds');
+    // assert OneValuePerBallot_ProposeMsgAndLeader(c, ds');
 }
 
 
@@ -72,6 +189,7 @@ lemma AgreementChosenInv_NoneChosen(c:Constants, ds:DistrSys, ds':DistrSys)
     requires Agreement_Chosen_Inv(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
+    requires Agreement_Chosen_Inv_Common(c, ds')
     requires !SomeValueChosen(c, ds)
     ensures Agreement_Chosen_Inv(c, ds')
 {
@@ -93,38 +211,13 @@ lemma AgreementChosenInv_NoneChosen_AccAction(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
     requires Agreement_Chosen_Inv(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_Common(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
     requires !SomeValueChosen(c, ds)
     ensures Agreement_Chosen_Inv(c, ds')
 {
-    AgreementChosenInv_NoneChosen_AccAction_AgreementChosen(c, ds, ds', actor, recvIos, sendIos);
-    lemma_NetworkMonotoneIncreasing(c, ds, ds');
-    
-    // Leader state
-    assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');   
-    assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
-
-    // Acceptor state
-    assert AccPromisedBallotLargerThanAccepted(c, ds');    
-
-    // Messages
-    AgreementChosenInv_NoneChosen_AccAction_PromiseMsgBalLargerThanAcceptedItSees(c, ds, ds', actor, recvIos, sendIos);
-    assert PromiseMsgBalLargerThanAcceptedItSees(c, ds');   // TODO
-    assume PromiseVBImpliesAcceptMsg(c, ds');               // TODO
-    assume AcceptMsgImpliesAccepted(c, ds');                // TODO
-    assume AcceptedImpliesAcceptMsg(c, ds');                // TODO
-    assume AcceptMsgImpliesProposeMsg(c, ds');              // TODO
-    assume LeaderP2ImpliesQuorumOfPromise(c, ds');          // TODO
-    assume ProposeMsgImpliesQuorumOfPromise(c, ds');        // TODO
-    assume PromisedImpliesNoMoreAccepts(c, ds');            // TODO
-
-
-    AgreementChosenInv_NoneChosen_AccAction_OneValuePerBallot(c, ds, ds', actor, recvIos, sendIos);
-    assert OneValuePerBallot(c, ds');
-
-    // Chosen
     forall b, v | Chosen(c, ds', b, v) 
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
     {
@@ -132,51 +225,6 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
         AgreementChosenInv_NoneChosen_AccAction_NewChosenV(c, ds, ds', actor, recvIos, sendIos, b, v);
     }
     assert Agreement_Chosen_Inv(c, ds');
-}
-
-lemma AgreementChosenInv_NoneChosen_AccAction_PromiseMsgBalLargerThanAcceptedItSees(
-c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
-    requires Agreement_Chosen_Inv(c, ds)
-    requires ds'.WF(c) && Trivialities(c, ds')
-    requires Next(c, ds, ds')
-    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires c.ValidAccId(actor)
-    requires !SomeValueChosen(c, ds)
-    ensures PromiseMsgBalLargerThanAcceptedItSees(c, ds')
-{
-    var a, a' := ds.acceptors[actor.idx], ds'.acceptors[actor.idx];
-    if recvIos[0].msg.Prepare? {
-        lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
-        if BalLt(a.promised, recvIos[0].msg.bal) {
-            assert BalLtEq(a.accepted.b, a.promised);
-            var newProm := sendIos[0];
-            assert newProm.msg.bal == recvIos[0].msg.bal && newProm.msg.vb.b == a.accepted.b;
-            lemma_BalLtTransitivity2(newProm.msg.vb.b, a.promised, newProm.msg.bal);
-            lemma_SingleElemList(sendIos, newProm);
-        } 
-    } else {
-        lemma_NoPromiseSentInAcceptStep(c, ds, ds', actor, recvIos, sendIos);
-    }
-}
-
-
-lemma AgreementChosenInv_NoneChosen_AccAction_OneValuePerBallot(
-c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
-    requires Agreement_Chosen_Inv(c, ds)
-    requires ds'.WF(c) && Trivialities(c, ds')
-    requires Next(c, ds, ds')
-    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires AcceptMsgImpliesProposeMsg(c, ds');
-    requires PromiseVBImpliesAcceptMsg(c, ds');
-    requires c.ValidAccId(actor)
-    requires !SomeValueChosen(c, ds)
-    ensures OneValuePerBallot(c, ds')
-{
-    // assert OneValuePerBallot_Leaders(c, ds');
-    // assert OneValuePerBallot_ProposeMsg(c, ds');
-    // assert OneValuePerBallot_AcceptMsg(c, ds');
-    // assert OneValuePerBallot_PromiseMsg(c, ds');
-    // assert OneValuePerBallot_ProposeMsgAndLeader(c, ds');
 }
 
 

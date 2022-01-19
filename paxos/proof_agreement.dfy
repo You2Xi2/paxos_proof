@@ -80,7 +80,6 @@ lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys)
         assume false;
         assert Agreement_Chosen_Inv_Common(c, ds');
     } else {
-        assume false;
         // Leader state
         assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');   
         assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
@@ -88,12 +87,10 @@ lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys)
         // Acceptor state
         assert AccPromisedBallotLargerThanAccepted(c, ds');    
 
-
         // Messages
-        AgreementChosenInv_NoneChosen_AccAction_PromiseMsgBalLargerThanAcceptedItSees(c, ds, ds', actor, recvIos, sendIos);
+        AgreementChosenInv_AccAction_PromiseMsgBalLargerThanAcceptedItSees(c, ds, ds', actor, recvIos, sendIos);
         assert PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
-
-        AgreementChosenInv_NoneChosen_AccAction_PromiseVBImpliesAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
+        AgreementChosenInv_AccAction_PromiseVBImpliesAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
         assert PromiseVBImpliesAcceptMsg(c, ds');             
 
 
@@ -110,7 +107,7 @@ lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys)
     }
 }
 
-lemma AgreementChosenInv_NoneChosen_AccAction_PromiseMsgBalLargerThanAcceptedItSees(
+lemma AgreementChosenInv_AccAction_PromiseMsgBalLargerThanAcceptedItSees(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
     requires Agreement_Chosen_Inv(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
@@ -119,7 +116,6 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires c.ValidAccId(actor)
     ensures PromiseMsgBalLargerThanAcceptedItSees(c, ds')
 {
-    assume false;
     var a, a' := ds.acceptors[actor.idx], ds'.acceptors[actor.idx];
     if recvIos[0].msg.Prepare? {
         lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
@@ -136,7 +132,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 }
 
 
-lemma AgreementChosenInv_NoneChosen_AccAction_PromiseVBImpliesAcceptMsg(
+lemma AgreementChosenInv_AccAction_PromiseVBImpliesAcceptMsg(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
     requires Agreement_Chosen_Inv(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
@@ -145,18 +141,17 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires c.ValidAccId(actor)
     ensures PromiseVBImpliesAcceptMsg(c, ds')
 {
-    assume false;
     var a, a' := ds.acceptors[actor.idx], ds'.acceptors[actor.idx];
     if recvIos[0].msg.Prepare? {
-        assume false;
-        // lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
-        // if BalLt(a.promised, recvIos[0].msg.bal) {
-        //     assert BalLtEq(a.accepted.b, a.promised);
-        //     var newProm := sendIos[0];
-        //     assert newProm.msg.bal == recvIos[0].msg.bal && newProm.msg.vb.b == a.accepted.b;
-        //     lemma_BalLtTransitivity2(newProm.msg.vb.b, a.promised, newProm.msg.bal);
-        //     lemma_SingleElemList(sendIos, newProm);
-        // } 
+        if BalLt(a.promised, recvIos[0].msg.bal) {
+            var outPkt := sendIos[0];
+            if outPkt.msg.vb.b != Bottom {
+                var p :|    && isAcceptPkt(ds, p)   // by AcceptedImpliesAcceptMsg
+                            && p.src == actor
+                            && p.msg == Accept(a.accepted.b, a.accepted.v);
+                lemma_SingleElemList(sendIos, outPkt);
+            }
+        }
     } else {
         lemma_NoPromiseSentInAcceptStep(c, ds, ds', actor, recvIos, sendIos);
     }
@@ -454,6 +449,8 @@ accpt:Packet, b1:Ballot, v':Value)
         // Fetch Accept packet corresponding to balval seen by prom1
         var accpt2 :|   && isAcceptPkt(ds', accpt2)      // by PromiseVBImpliesAcceptMsg
                         && accpt2.msg == Accept(b2, v');
+        // AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs_helper(c, ds, ds', 
+        //     actor, recvIos, sendIos, b, v, accpt2, b2, v');
         axiom_BallotInduction1(c, ds', accpt, b, v);
     }
 }

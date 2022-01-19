@@ -197,8 +197,8 @@ lemma AgreementChosenInv_NoneChosen(c:Constants, ds:DistrSys, ds':DistrSys)
     if actor.agt == Ldr {
         // If actor is a Leader
         // No values are chosen in this step
-        assume false;
-        assert Agreement_Chosen_Inv(c, ds');
+        lemma_NoNewAcceptsImpliesNoNewChosen(c, ds, ds');
+        assert !SomeValueChosen(c, ds');
     } else {
         // If actor is an Acceptor: This is the tricky case as 
         // some value may be chosen in this step

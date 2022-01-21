@@ -89,15 +89,15 @@ lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys)
 
         // Messages
         AgreementChosenInv_AccAction_PromiseMsgBalLargerThanAcceptedItSees(c, ds, ds', actor, recvIos, sendIos);
-        assert PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
         AgreementChosenInv_AccAction_PromiseVBImpliesAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
-        assert PromiseVBImpliesAcceptMsg(c, ds');             
         AgreementChosenInv_AccAction_AcceptMsgImpliesAccepted(c, ds, ds', actor, recvIos, sendIos);
+        assert PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
+        assert PromiseVBImpliesAcceptMsg(c, ds');             
         assert AcceptMsgImpliesAccepted(c, ds');   
+        assert AcceptedImpliesAcceptMsg(c, ds');                
 
-
-        assume AcceptedImpliesAcceptMsg(c, ds');                // TODO
-        assume AcceptMsgImpliesProposeMsg(c, ds');              // TODO
+        AgreementChosenInv_AccAction_AcceptMsgImpliesProposeMsg(c, ds, ds', actor, recvIos, sendIos);
+        assert AcceptMsgImpliesProposeMsg(c, ds');              
         assume LeaderP2ImpliesQuorumOfPromise(c, ds');          // TODO
         assume ProposeMsgImpliesQuorumOfPromise(c, ds');        // TODO
         assume PromisedImpliesNoMoreAccepts(c, ds');            // TODO
@@ -171,6 +171,30 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 {
     forall p:Packet | c.ValidAccIdx(p.src.idx) && isAcceptPkt(ds', p)
     ensures BalLtEq(p.msg.bal, ds'.acceptors[p.src.idx].accepted.b)
+    {
+        if p !in ds.network.sentPackets { 
+            lemma_NewAcceptPktImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, p);
+        }
+    }
+}
+
+
+lemma AgreementChosenInv_AccAction_AcceptMsgImpliesProposeMsg(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    ensures AcceptMsgImpliesProposeMsg(c, ds')
+{
+    lemma_NetworkMonotoneIncreasing(c, ds, ds');
+    forall p:Packet | c.ValidAccIdx(p.src.idx) && isAcceptPkt(ds', p)
+    ensures exists prop_p :: 
+        && isProposePkt(ds, prop_p)
+        && prop_p.src == p.dst
+        && prop_p.dst == p.src
+        && prop_p.msg == Propose(p.msg.bal, p.msg.val)
     {
         if p !in ds.network.sentPackets { 
             lemma_NewAcceptPktImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, p);

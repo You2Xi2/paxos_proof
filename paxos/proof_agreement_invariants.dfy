@@ -203,7 +203,7 @@ predicate AcceptMsgImpliesAccepted(c:Constants, ds:DistrSys)
     :: BalLtEq(p.msg.bal, ds.acceptors[p.src.idx].accepted.b)
 }
 
-/* If an acceptor has currently accepted ballot b, then there must be an Accept message in the network
+/* If an acceptor has currently accepted (b, v), then there must be an Accept(b, v) message in the network
 * from that acceptor */
 predicate AcceptedImpliesAcceptMsg(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)

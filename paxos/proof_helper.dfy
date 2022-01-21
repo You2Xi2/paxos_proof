@@ -239,16 +239,44 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 
 
 /* If this step is an AcceptorAccept step, then no new promises sent */
-lemma lemma_NoPromiseSentInAcceptStep(
+lemma lemma_NoPromiseSentInNonPromiseStep(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
     requires c.WF() && ds.WF(c) && ds'.WF(c)
     requires AllPacketsValid(c, ds) && AllPacketsValid(c, ds')
     requires Next(c, ds, ds')
     requires c.ValidAccId(actor)
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires recvIos[0].msg.Propose?
-    // requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
+    requires !recvIos[0].msg.Prepare?  
     ensures forall p | isPromisePkt(ds', p) :: p in ds.network.sentPackets
+{}
+
+/* If this step is an AcceptorPromise step, then no new accepts sent */
+lemma lemma_NoAcceptsSentInNonAcceptStep(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires c.WF() && ds.WF(c) && ds'.WF(c)
+    requires AllPacketsValid(c, ds) && AllPacketsValid(c, ds')
+    requires Next(c, ds, ds')
+    requires c.ValidAccId(actor)
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires !recvIos[0].msg.Propose?   
+    ensures forall p | isAcceptPkt(ds', p) :: p in ds.network.sentPackets
+{}
+
+
+/* If a new Accept packet is sent in this step, then this step must be an AcceptorAccept step */
+lemma lemma_NewAcceptPktImpliesAcceptStep(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, p:Packet) 
+    requires c.WF() && ds.WF(c) && ds'.WF(c)
+    requires AllPacketsValid(c, ds) && AllPacketsValid(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires isAcceptPkt(ds', p)
+    requires p !in ds.network.sentPackets
+    ensures recvIos[0].msg.Propose?
+    ensures AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos)   
+    ensures BalLtEq(ds.acceptors[actor.idx].promised, recvIos[0].msg.bal)
+    ensures p == sendIos[0]
 {}
 
 
@@ -328,10 +356,16 @@ lemma lemma_BalLtTransitivity2(b1:Ballot, b2:Ballot, b3:Ballot)
 {}
 
 
-lemma lemma_SingleElemList<T>(s:seq<T>, e:T) 
+lemma lemma_SingleElemList1<T>(s:seq<T>, e:T) 
     requires |s| == 1;
     requires e == s[0]
     ensures forall e' | e' in s :: e' == e
+{}
+
+lemma lemma_SingleElemList2<T>(s:seq<T>, e:T) 
+    requires |s| == 1;
+    requires e in s
+    ensures e == s[0]
 {}
 
 

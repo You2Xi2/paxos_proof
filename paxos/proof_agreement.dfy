@@ -75,7 +75,7 @@ lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys)
     ensures Agreement_Chosen_Inv_Common(c, ds')
 {
     var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
-    lemma_NetworkMonotoneIncreasing(c, ds, ds');
+    // lemma_NetworkMonotoneIncreasing(c, ds, ds');
     if actor.agt == Ldr {
         assume false;
         assert Agreement_Chosen_Inv_Common(c, ds');
@@ -92,9 +92,10 @@ lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys)
         assert PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
         AgreementChosenInv_AccAction_PromiseVBImpliesAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
         assert PromiseVBImpliesAcceptMsg(c, ds');             
+        AgreementChosenInv_AccAction_AcceptMsgImpliesAccepted(c, ds, ds', actor, recvIos, sendIos);
+        assert AcceptMsgImpliesAccepted(c, ds');   
 
 
-        assume AcceptMsgImpliesAccepted(c, ds');                // TODO
         assume AcceptedImpliesAcceptMsg(c, ds');                // TODO
         assume AcceptMsgImpliesProposeMsg(c, ds');              // TODO
         assume LeaderP2ImpliesQuorumOfPromise(c, ds');          // TODO
@@ -106,6 +107,7 @@ lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys)
         assert OneValuePerBallot(c, ds');
     }
 }
+
 
 lemma AgreementChosenInv_AccAction_PromiseMsgBalLargerThanAcceptedItSees(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
@@ -124,10 +126,10 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
             var newProm := sendIos[0];
             assert newProm.msg.bal == recvIos[0].msg.bal && newProm.msg.vb.b == a.accepted.b;
             lemma_BalLtTransitivity2(newProm.msg.vb.b, a.promised, newProm.msg.bal);
-            lemma_SingleElemList(sendIos, newProm);
+            lemma_SingleElemList1(sendIos, newProm);
         } 
     } else {
-        lemma_NoPromiseSentInAcceptStep(c, ds, ds', actor, recvIos, sendIos);
+        lemma_NoPromiseSentInNonPromiseStep(c, ds, ds', actor, recvIos, sendIos);
     }
 }
 
@@ -149,13 +151,34 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
                 var p :|    && isAcceptPkt(ds, p)   // by AcceptedImpliesAcceptMsg
                             && p.src == actor
                             && p.msg == Accept(a.accepted.b, a.accepted.v);
-                lemma_SingleElemList(sendIos, outPkt);
+                lemma_SingleElemList1(sendIos, outPkt);
             }
         }
     } else {
-        lemma_NoPromiseSentInAcceptStep(c, ds, ds', actor, recvIos, sendIos);
+        lemma_NoPromiseSentInNonPromiseStep(c, ds, ds', actor, recvIos, sendIos);
     }
 }
+
+
+lemma AgreementChosenInv_AccAction_AcceptMsgImpliesAccepted(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    ensures AcceptMsgImpliesAccepted(c, ds')
+{
+    forall p:Packet | c.ValidAccIdx(p.src.idx) && isAcceptPkt(ds', p)
+    ensures BalLtEq(p.msg.bal, ds'.acceptors[p.src.idx].accepted.b)
+    {
+        if p !in ds.network.sentPackets { 
+            lemma_NewAcceptPktImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, p);
+        }
+    }
+}
+
+
 
 
 lemma AgreementChosenInv_NoneChosen_AccAction_OneValuePerBallot(
@@ -303,7 +326,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     */
     if !QuorumHasSeenB(c, ds', qrm', b) {
         forall prom | prom in qrm' ensures BalLt(prom.msg.vb.b, b) {}
-        lemma_NoPromiseSentInAcceptStep(c, ds, ds', actor, recvIos, sendIos);
+        lemma_NoPromiseSentInNonPromiseStep(c, ds, ds', actor, recvIos, sendIos);
         assert QuorumOfPromiseMsgs(c, ds, qrm', b');
         
         // Get set of acceptors that promised b' (and not seen b) in ds

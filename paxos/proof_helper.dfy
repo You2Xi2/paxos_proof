@@ -279,6 +279,22 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     ensures p == sendIos[0]
 {}
 
+/* If a new Promise packet is sent in this step, then this step must be an AcceptorPromise step */
+lemma lemma_NewAcceptPktImpliesPromiseStep(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, p:Packet) 
+    requires c.WF() && ds.WF(c) && ds'.WF(c)
+    requires AllPacketsValid(c, ds) && AllPacketsValid(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires isPromisePkt(ds', p)
+    requires p !in ds.network.sentPackets
+    ensures recvIos[0].msg.Prepare?
+    ensures AcceptorPromise(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos)   
+    ensures BalLt(ds.acceptors[actor.idx].promised, recvIos[0].msg.bal)
+    ensures p == sendIos[0]
+{}
+
 
 /* SentPackets set is a monotone increasing set */
 lemma lemma_NetworkMonotoneIncreasing(c:Constants, ds:DistrSys, ds':DistrSys) 

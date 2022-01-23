@@ -91,19 +91,17 @@ lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys)
         AgreementChosenInv_AccAction_PromiseMsgBalLargerThanAcceptedItSees(c, ds, ds', actor, recvIos, sendIos);
         AgreementChosenInv_AccAction_PromiseVBImpliesAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
         AgreementChosenInv_AccAction_AcceptMsgImpliesAccepted(c, ds, ds', actor, recvIos, sendIos);
+        AgreementChosenInv_AccAction_AcceptMsgImpliesProposeMsg(c, ds, ds', actor, recvIos, sendIos);
+        AgreementChosenInv_AccAction_PromisedImpliesNoMoreAccepts(c, ds, ds', actor, recvIos, sendIos);
+        AgreementChosenInv_NoneChosen_AccAction_OneValuePerBallot(c, ds, ds', actor, recvIos, sendIos);
         assert PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
         assert PromiseVBImpliesAcceptMsg(c, ds');             
         assert AcceptMsgImpliesAccepted(c, ds');   
         assert AcceptedImpliesAcceptMsg(c, ds');                
-
-        AgreementChosenInv_AccAction_AcceptMsgImpliesProposeMsg(c, ds, ds', actor, recvIos, sendIos);
         assert AcceptMsgImpliesProposeMsg(c, ds');              
-        assume LeaderP2ImpliesQuorumOfPromise(c, ds');          // TODO
-        assume ProposeMsgImpliesQuorumOfPromise(c, ds');        // TODO
-        assume PromisedImpliesNoMoreAccepts(c, ds');            // TODO
-
-
-        AgreementChosenInv_NoneChosen_AccAction_OneValuePerBallot(c, ds, ds', actor, recvIos, sendIos);
+        assert LeaderP2ImpliesQuorumOfPromise(c, ds');          
+        assert ProposeMsgImpliesQuorumOfPromise(c, ds');       
+        assert PromisedImpliesNoMoreAccepts(c, ds');  
         assert OneValuePerBallot(c, ds');
     }
 }
@@ -201,6 +199,53 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
         }
     }
 }
+
+
+/* If a promised packet promised b', with previously accepted (v, b), then 
+*   - there can be no accept messages in network, from the same acceptor, 
+*       with ballot x such that b < x < b' 
+*   - the acceptor either has (v, b) accepted, or accepted some ballot >= b'
+*/
+lemma AgreementChosenInv_AccAction_PromisedImpliesNoMoreAccepts(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    ensures PromisedImpliesNoMoreAccepts(c, ds')
+{
+    forall prom_p | 
+        && prom_p in ds'.network.sentPackets 
+        && prom_p.msg.Promise?
+    ensures && AcceptorConstraint(c, ds', prom_p.src, prom_p.msg.bal, prom_p.msg.vb.b)
+            && AcceptMessageConstraint(c, ds', prom_p.src, prom_p.msg.bal, prom_p.msg.vb.b)
+    {
+        var prom_promised_bal, prom_accepted_bal := prom_p.msg.bal, prom_p.msg.vb.b;
+        
+        if prom_p in ds.network.sentPackets {
+            assert AcceptorConstraint(c, ds', prom_p.src, prom_p.msg.bal, prom_p.msg.vb.b);
+            forall acc_p | isAcceptPkt(ds', acc_p) && acc_p.src == prom_p.src
+            ensures|| BalLtEq(acc_p.msg.bal, prom_accepted_bal)
+                   || BalLtEq(prom_promised_bal, acc_p.msg.bal)
+            {
+                if acc_p !in ds.network.sentPackets {
+                    /* This step is an accept step. So we have a.promised >= prom_promised_bal.
+                    * acc_p has ballot a'.accepted.b == a'.promised. 
+                    * And prom_promised_bal <= a.promised <= a'.promised;
+                    */ 
+                    lemma_NewAcceptPktImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, acc_p);
+                    var a, a' := ds.acceptors[actor.idx], ds'.acceptors[actor.idx];
+                    lemma_BalLtEqTransitivity(prom_promised_bal, a.promised, a'.promised);
+                } 
+            }       
+        } else {
+            lemma_NewAcceptPktImpliesPromiseStep(c, ds, ds', actor, recvIos, sendIos, prom_p);
+        }
+    }
+}
+
+           
 
 
 

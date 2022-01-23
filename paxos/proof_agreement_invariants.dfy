@@ -52,7 +52,10 @@ predicate Agreement_Chosen_Inv(c:Constants, ds:DistrSys)
     && Agreement_Chosen_Safety(c, ds)
 }
 
-predicate Agreement_Chosen_Inv_ChosenProperties(c:Constants, ds:DistrSys) {
+predicate Agreement_Chosen_Inv_ChosenProperties(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+    requires AllPacketsValid(c, ds)
+{
     forall b, v | Chosen(c, ds, b, v) 
         :: Agreement_Chosen_Inv_SomeValChosen(c, ds, b, v)
 }
@@ -338,9 +341,8 @@ predicate AcceptMessageConstraint(c:Constants, ds:DistrSys, src:Id, p1_promised_
     requires c.WF() && ds.WF(c)
 {
     forall acc_p | 
-        && acc_p in ds.network.sentPackets 
+        && isAcceptPkt(ds, acc_p)
         && acc_p.src == src
-        && acc_p.msg.Accept?
     :: 
         || BalLtEq(acc_p.msg.bal, p1_accepted_bal)
         || BalLtEq(p1_promised_bal, acc_p.msg.bal)

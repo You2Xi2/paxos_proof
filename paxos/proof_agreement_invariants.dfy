@@ -282,10 +282,15 @@ predicate ProposeMsgImpliesQuorumOfPromise(c:Constants, ds:DistrSys)
 predicate LdrAcceptsSetCorrespondToAcceptMsg(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    forall i | c.ValidLdrIdx(i) ::(
-        forall s | s in ds.leaders[i].accepts
-        :: Packet(s, Id(Ldr, i), Accept(ds.leaders[i].ballot, ds.leaders[i].val)) in ds.network.sentPackets
-    )
+    forall i | c.ValidLdrIdx(i) :: AcceptsSetCorrespondToAcceptMsg(c, ds, i) 
+}
+
+predicate AcceptsSetCorrespondToAcceptMsg(c:Constants, ds:DistrSys, i:int) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrIdx(i)
+{
+    forall s | s in ds.leaders[i].accepts
+    :: Packet(s, Id(Ldr, i), Accept(ds.leaders[i].ballot, ds.leaders[i].val)) in ds.network.sentPackets
 }
 
 /* All l.promises collected by l came from network */

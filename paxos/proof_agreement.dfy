@@ -75,36 +75,56 @@ lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys)
     ensures Agreement_Chosen_Inv_Common(c, ds')
 {
     var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
-    // lemma_NetworkMonotoneIncreasing(c, ds, ds');
+
     if actor.agt == Ldr {
-        assume false;
-        assert Agreement_Chosen_Inv_Common(c, ds');
-    } else {
         // Leader state
+        AgreementChosenInv_LdrAction_LdrAcceptsSetCorrespondToAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
         assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');   
-        assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
+
+        assume LdrPromisesSetCorrespondToPromiseMsg(c, ds');
         
         // Acceptor state
-        assert AccPromisedBallotLargerThanAccepted(c, ds');    
+        assume AccPromisedBallotLargerThanAccepted(c, ds');    
 
         // Messages
+        assume PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
+        assume PromiseVBImpliesAcceptMsg(c, ds');             
+        assume AcceptMsgImpliesAccepted(c, ds');   
+        assume AcceptedImpliesAcceptMsg(c, ds');                
+        assume AcceptMsgImpliesProposeMsg(c, ds');              
+        assume LeaderP2ImpliesQuorumOfPromise(c, ds');          
+        assume ProposeMsgImpliesQuorumOfPromise(c, ds');       
+        assume PromisedImpliesNoMoreAccepts(c, ds');  
+        assume OneValuePerBallot(c, ds');
+    } else {
+        assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');   
+        assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
+        assert AccPromisedBallotLargerThanAccepted(c, ds');    
         AgreementChosenInv_AccAction_PromiseMsgBalLargerThanAcceptedItSees(c, ds, ds', actor, recvIos, sendIos);
         AgreementChosenInv_AccAction_PromiseVBImpliesAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
         AgreementChosenInv_AccAction_AcceptMsgImpliesAccepted(c, ds, ds', actor, recvIos, sendIos);
         AgreementChosenInv_AccAction_AcceptMsgImpliesProposeMsg(c, ds, ds', actor, recvIos, sendIos);
         AgreementChosenInv_AccAction_PromisedImpliesNoMoreAccepts(c, ds, ds', actor, recvIos, sendIos);
         AgreementChosenInv_NoneChosen_AccAction_OneValuePerBallot(c, ds, ds', actor, recvIos, sendIos);
-        assert PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
-        assert PromiseVBImpliesAcceptMsg(c, ds');             
-        assert AcceptMsgImpliesAccepted(c, ds');   
-        assert AcceptedImpliesAcceptMsg(c, ds');                
-        assert AcceptMsgImpliesProposeMsg(c, ds');              
-        assert LeaderP2ImpliesQuorumOfPromise(c, ds');          
-        assert ProposeMsgImpliesQuorumOfPromise(c, ds');       
-        assert PromisedImpliesNoMoreAccepts(c, ds');  
-        assert OneValuePerBallot(c, ds');
     }
 }
+
+
+lemma AgreementChosenInv_LdrAction_LdrAcceptsSetCorrespondToAcceptMsg(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidLdrId(actor)
+    ensures LdrAcceptsSetCorrespondToAcceptMsg(c, ds')
+{
+    lemma_NetworkMonotoneIncreasing(c, ds, ds');
+    forall i | c.ValidLdrIdx(i) 
+    ensures AcceptsSetCorrespondToAcceptMsg(c, ds', i) 
+    {}
+}
+
 
 
 lemma AgreementChosenInv_AccAction_PromiseMsgBalLargerThanAcceptedItSees(
@@ -167,6 +187,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires c.ValidAccId(actor)
     ensures AcceptMsgImpliesAccepted(c, ds')
 {
+    lemma_NetworkMonotoneIncreasing(c, ds, ds');
     forall p:Packet | c.ValidAccIdx(p.src.idx) && isAcceptPkt(ds', p)
     ensures BalLtEq(p.msg.bal, ds'.acceptors[p.src.idx].accepted.b)
     {
@@ -246,9 +267,6 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 }
 
            
-
-
-
 
 lemma AgreementChosenInv_NoneChosen_AccAction_OneValuePerBallot(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)

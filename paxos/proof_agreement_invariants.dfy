@@ -247,14 +247,16 @@ predicate LeaderP2ImpliesQuorumOfPromise(c:Constants, ds:DistrSys)
     requires c.WF() && ds.WF(c)
 {
     forall idx | c.ValidLdrIdx(idx) && LeaderInPhase2(c, ds, idx)
-    :: (
-    var b := ds.leaders[idx].ballot;
-    var v := ds.leaders[idx].val;
-    exists qrm  :: 
-        && QuorumOfPromiseMsgs(c, ds, qrm, b)
-        && (|| PromisePktWithHighestBallot(qrm).msg.vb.v == v
-            || PromisePktWithHighestBallot(qrm).msg.vb.v == Nil
-        )
+    :: (exists qrm  
+        :: QrmHighestBallotNilOrV(c, ds, qrm, ds.leaders[idx].ballot, ds.leaders[idx].val))
+}
+
+predicate QrmHighestBallotNilOrV(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot, v:Value) 
+    requires c.WF() && ds.WF(c)
+{
+    && QuorumOfPromiseMsgs(c, ds, qrm, b)
+    && (|| PromisePktWithHighestBallot(qrm).msg.vb.v == v
+        || PromisePktWithHighestBallot(qrm).msg.vb.v == Nil
     )
 }
 
@@ -297,10 +299,14 @@ predicate AcceptsSetCorrespondToAcceptMsg(c:Constants, ds:DistrSys, i:int)
 predicate LdrPromisesSetCorrespondToPromiseMsg(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    forall i | c.ValidLdrIdx(i) ::(
-        forall p | p in ds.leaders[i].promises
-        :: p in ds.network.sentPackets
-    )
+    forall i | c.ValidLdrIdx(i) :: PromisesSetCorrespondToPromiseMsg(c, ds, i)
+}
+
+predicate PromisesSetCorrespondToPromiseMsg(c:Constants, ds:DistrSys, i:int) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrIdx(i)
+{
+    forall p | p in ds.leaders[i].promises :: p in ds.network.sentPackets
 }
 
 /* Acceptor promised ballot always at least as large as accepted ballot */

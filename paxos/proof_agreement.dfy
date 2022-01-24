@@ -75,38 +75,62 @@ lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys)
     ensures Agreement_Chosen_Inv_Common(c, ds')
 {
     var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
-
     if actor.agt == Ldr {
-        // Leader state
-        AgreementChosenInv_LdrAction_LdrAcceptsSetCorrespondToAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
-        assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');   
-
-        assume LdrPromisesSetCorrespondToPromiseMsg(c, ds');
-        
-        // Acceptor state
-        assume AccPromisedBallotLargerThanAccepted(c, ds');    
-
-        // Messages
-        assume PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
-        assume PromiseVBImpliesAcceptMsg(c, ds');             
-        assume AcceptMsgImpliesAccepted(c, ds');   
-        assume AcceptedImpliesAcceptMsg(c, ds');                
-        assume AcceptMsgImpliesProposeMsg(c, ds');              
-        assume LeaderP2ImpliesQuorumOfPromise(c, ds');          
-        assume ProposeMsgImpliesQuorumOfPromise(c, ds');       
-        assume PromisedImpliesNoMoreAccepts(c, ds');  
-        assume OneValuePerBallot(c, ds');
+        AgreementChosenInv_LdrAction(c, ds, ds', actor, recvIos, sendIos);
     } else {
-        assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');   
-        assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
-        assert AccPromisedBallotLargerThanAccepted(c, ds');    
-        AgreementChosenInv_AccAction_PromiseMsgBalLargerThanAcceptedItSees(c, ds, ds', actor, recvIos, sendIos);
-        AgreementChosenInv_AccAction_PromiseVBImpliesAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
-        AgreementChosenInv_AccAction_AcceptMsgImpliesAccepted(c, ds, ds', actor, recvIos, sendIos);
-        AgreementChosenInv_AccAction_AcceptMsgImpliesProposeMsg(c, ds, ds', actor, recvIos, sendIos);
-        AgreementChosenInv_AccAction_PromisedImpliesNoMoreAccepts(c, ds, ds', actor, recvIos, sendIos);
-        AgreementChosenInv_NoneChosen_AccAction_OneValuePerBallot(c, ds, ds', actor, recvIos, sendIos);
+        AgreementChosenInv_AccAction(c, ds, ds', actor, recvIos, sendIos);
     }
+}
+
+lemma AgreementChosenInv_LdrAction(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidLdrId(actor)
+    ensures Agreement_Chosen_Inv_Common(c, ds')
+{
+    // Leader state
+    AgreementChosenInv_LdrAction_LdrAcceptsSetCorrespondToAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
+    assume LdrAcceptsSetCorrespondToAcceptMsg(c, ds');   
+    assume LdrPromisesSetCorrespondToPromiseMsg(c, ds');
+    
+    // Acceptor state
+    assume AccPromisedBallotLargerThanAccepted(c, ds');    
+
+    // Messages
+    assume PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
+    assume PromiseVBImpliesAcceptMsg(c, ds');             
+    assume AcceptMsgImpliesAccepted(c, ds');   
+    assume AcceptedImpliesAcceptMsg(c, ds');  
+    assume AcceptMsgImpliesProposeMsg(c, ds');   
+
+    assume false;
+    AgreementChosenInv_LdrAction_LeaderP2ImpliesQuorumOfPromise(c, ds, ds', actor, recvIos, sendIos);
+    assume LeaderP2ImpliesQuorumOfPromise(c, ds');          
+    assume ProposeMsgImpliesQuorumOfPromise(c, ds');       
+    assume PromisedImpliesNoMoreAccepts(c, ds');  
+    assume OneValuePerBallot(c, ds');
+}
+
+lemma AgreementChosenInv_AccAction(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    ensures Agreement_Chosen_Inv_Common(c, ds')
+{
+    lemma_NetworkMonotoneIncreasing(c, ds, ds'); 
+    AgreementChosenInv_AccAction_PromiseMsgBalLargerThanAcceptedItSees(c, ds, ds', actor, recvIos, sendIos);
+    AgreementChosenInv_AccAction_PromiseVBImpliesAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
+    AgreementChosenInv_AccAction_AcceptMsgImpliesAccepted(c, ds, ds', actor, recvIos, sendIos);
+    AgreementChosenInv_AccAction_AcceptMsgImpliesProposeMsg(c, ds, ds', actor, recvIos, sendIos);
+    AgreementChosenInv_AccAction_LeaderP2ImpliesQuorumOfPromise(c, ds, ds', actor, recvIos, sendIos);
+    AgreementChosenInv_AccAction_PromisedImpliesNoMoreAccepts(c, ds, ds', actor, recvIos, sendIos);
+    AgreementChosenInv_NoneChosen_AccAction_OneValuePerBallot(c, ds, ds', actor, recvIos, sendIos);
 }
 
 
@@ -125,6 +149,23 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     {}
 }
 
+lemma AgreementChosenInv_LdrAction_LeaderP2ImpliesQuorumOfPromise(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidLdrId(actor)
+    requires LdrPromisesSetCorrespondToPromiseMsg(c, ds')
+    ensures LeaderP2ImpliesQuorumOfPromise(c, ds')
+{
+    lemma_NetworkMonotoneIncreasing(c, ds, ds');
+    forall idx | c.ValidLdrIdx(idx) && LeaderInPhase2(c, ds', idx)
+    ensures exists qrm :: QrmHighestBallotNilOrV(c, ds', qrm, ds'.leaders[idx].ballot, ds'.leaders[idx].val)
+    {
+        assume false;
+    }
+}
 
 
 lemma AgreementChosenInv_AccAction_PromiseMsgBalLargerThanAcceptedItSees(
@@ -218,6 +259,26 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
         if p !in ds.network.sentPackets { 
             lemma_NewAcceptPktImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, p);
         }
+    }
+}
+
+lemma AgreementChosenInv_AccAction_LeaderP2ImpliesQuorumOfPromise(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    ensures LeaderP2ImpliesQuorumOfPromise(c, ds')
+{
+    lemma_NetworkMonotoneIncreasing(c, ds, ds');
+    forall idx | c.ValidLdrIdx(idx) && LeaderInPhase2(c, ds', idx)
+    ensures exists qrm  
+        :: QrmHighestBallotNilOrV(c, ds', qrm, ds'.leaders[idx].ballot, ds'.leaders[idx].val)
+    {
+        assert ds'.leaders[idx] == ds.leaders[idx];
+        var qrm :| QrmHighestBallotNilOrV(c, ds, qrm, ds.leaders[idx].ballot, ds.leaders[idx].val);
+        assert QrmHighestBallotNilOrV(c, ds', qrm, ds'.leaders[idx].ballot, ds'.leaders[idx].val);
     }
 }
 

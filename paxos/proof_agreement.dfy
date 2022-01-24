@@ -93,22 +93,24 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 {
     // Leader state
     AgreementChosenInv_LdrAction_LdrAcceptsSetCorrespondToAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
-    assume LdrAcceptsSetCorrespondToAcceptMsg(c, ds');   
-    assume LdrPromisesSetCorrespondToPromiseMsg(c, ds');
+    assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');   
+    assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
+    assert LdrPromisesSetHaveLeaderBallot(c, ds');
+    AgreementChosenInv_LdrAction_LdrPromisesSetHaveUniqueSrc(c, ds, ds', actor, recvIos, sendIos);
+    assert LdrPromisesSetHaveUniqueSrc(c, ds');
     
     // Acceptor state
-    assume AccPromisedBallotLargerThanAccepted(c, ds');    
+    assert AccPromisedBallotLargerThanAccepted(c, ds');    
 
     // Messages
-    assume PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
-    assume PromiseVBImpliesAcceptMsg(c, ds');             
-    assume AcceptMsgImpliesAccepted(c, ds');   
-    assume AcceptedImpliesAcceptMsg(c, ds');  
-    assume AcceptMsgImpliesProposeMsg(c, ds');   
+    assert PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
+    assert PromiseVBImpliesAcceptMsg(c, ds');             
+    assert AcceptMsgImpliesAccepted(c, ds');   
+    assert AcceptedImpliesAcceptMsg(c, ds');  
+    assert AcceptMsgImpliesProposeMsg(c, ds');   
 
-    assume false;
     AgreementChosenInv_LdrAction_LeaderP2ImpliesQuorumOfPromise(c, ds, ds', actor, recvIos, sendIos);
-    assume LeaderP2ImpliesQuorumOfPromise(c, ds');          
+    assert LeaderP2ImpliesQuorumOfPromise(c, ds');          
     assume ProposeMsgImpliesQuorumOfPromise(c, ds');       
     assume PromisedImpliesNoMoreAccepts(c, ds');  
     assume OneValuePerBallot(c, ds');
@@ -149,6 +151,21 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     {}
 }
 
+lemma AgreementChosenInv_LdrAction_LdrPromisesSetHaveUniqueSrc(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidLdrId(actor)
+    ensures LdrPromisesSetHaveUniqueSrc(c, ds')
+{
+    forall idx | c.ValidLdrIdx(idx) 
+    ensures UniqueSources(ds'.leaders[idx].promises)
+    {}
+}
+
+
 lemma AgreementChosenInv_LdrAction_LeaderP2ImpliesQuorumOfPromise(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
     requires Agreement_Chosen_Inv(c, ds)
@@ -161,9 +178,80 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 {
     lemma_NetworkMonotoneIncreasing(c, ds, ds');
     forall idx | c.ValidLdrIdx(idx) && LeaderInPhase2(c, ds', idx)
-    ensures exists qrm :: QrmHighestBallotNilOrV(c, ds', qrm, ds'.leaders[idx].ballot, ds'.leaders[idx].val)
+    ensures exists q :: QrmHighestBallotNilOrV(c, ds', q, ds'.leaders[idx].ballot, ds'.leaders[idx].val)
     {
-        assume false;
+        if idx == actor.idx {
+            var l, l' := ds.leaders[idx], ds'.leaders[idx];
+            match l.state {
+                case P1a => 
+                    assert !LeaderInPhase2(c, ds', idx);
+                case P1b => {
+                    if recvIos[0].msg.Promise? {
+                        var src, msg := recvIos[0].src, recvIos[0].msg;
+                        if msg.bal == l.ballot && !exists p :: p in l.promises && p.src == src {
+                            assert LeaderProcessValidPromise(l, l', recvIos[0], sendIos);
+                            if |l.promises| == 2*l.consts.f {
+                                var promises := l.promises + {recvIos[0]};
+                                assert QrmHighestBallotNilOrV(c, ds', promises, ds'.leaders[idx].ballot, ds'.leaders[idx].val);
+                            } else {
+                                assert l'.state == l.state;
+                                assert !LeaderInPhase2(c, ds', idx);
+                            }
+                        } else {
+                            assert LeaderStutter(l, l', sendIos);
+                            assert !LeaderInPhase2(c, ds', idx);
+                        }
+                    } else if recvIos[0].msg.Preempt? {
+                        if BalLt(l.ballot, recvIos[0].msg.bal) {
+                            assert l'.state == P1a;
+                            assert !LeaderInPhase2(c, ds', idx);
+                        } else {
+                            assert LeaderStutter(l, l', sendIos);
+                            var qrm :| QrmHighestBallotNilOrV(c, ds, qrm, ds.leaders[idx].ballot, ds.leaders[idx].val);
+                            assert QrmHighestBallotNilOrV(c, ds', qrm, ds'.leaders[idx].ballot, ds'.leaders[idx].val);
+                        }
+                    }
+                }
+                case P2a => {
+                    var qrm :| QrmHighestBallotNilOrV(c, ds, qrm, ds.leaders[idx].ballot, ds.leaders[idx].val);
+                    assert QrmHighestBallotNilOrV(c, ds', qrm, ds'.leaders[idx].ballot, ds'.leaders[idx].val);
+                }
+                case P2b => {
+                    match recvIos[0].msg {
+                        case Accept(bal, val) => 
+                            if recvIos[0].msg.bal == l.ballot && recvIos[0].src !in l.accepts {
+                                var qrm :| QrmHighestBallotNilOrV(c, ds, qrm, ds.leaders[idx].ballot, ds.leaders[idx].val);
+                                assert QrmHighestBallotNilOrV(c, ds', qrm, ds'.leaders[idx].ballot, ds'.leaders[idx].val);
+                            } else {
+                                assert LeaderStutter(l, l', sendIos);
+                                var qrm :| QrmHighestBallotNilOrV(c, ds, qrm, ds.leaders[idx].ballot, ds.leaders[idx].val);
+                                assert QrmHighestBallotNilOrV(c, ds', qrm, ds'.leaders[idx].ballot, ds'.leaders[idx].val);
+                            }
+                        case Preempt(bal) => 
+                            if BalLt(l.ballot, recvIos[0].msg.bal) {
+                                assert l'.state == P1a;
+                                assert !LeaderInPhase2(c, ds', idx);
+                            } else {
+                                assert LeaderStutter(l, l', sendIos);
+                                var qrm :| QrmHighestBallotNilOrV(c, ds, qrm, ds.leaders[idx].ballot, ds.leaders[idx].val);
+                                assert QrmHighestBallotNilOrV(c, ds', qrm, ds'.leaders[idx].ballot, ds'.leaders[idx].val);
+                            }
+                        case _ => 
+                            assert LeaderStutter(l, l', sendIos);
+                            var qrm :| QrmHighestBallotNilOrV(c, ds, qrm, ds.leaders[idx].ballot, ds.leaders[idx].val);
+                            assert QrmHighestBallotNilOrV(c, ds', qrm, ds'.leaders[idx].ballot, ds'.leaders[idx].val);
+                    }
+                } 
+                case Decided => {
+                    assert LeaderStutter(l, l', sendIos);
+                    assert !LeaderInPhase2(c, ds', idx);
+                }
+            }
+        } else {
+            assert ds'.leaders[idx] == ds.leaders[idx];
+            var qrm :| QrmHighestBallotNilOrV(c, ds, qrm, ds.leaders[idx].ballot, ds.leaders[idx].val);
+            assert QrmHighestBallotNilOrV(c, ds', qrm, ds'.leaders[idx].ballot, ds'.leaders[idx].val);
+        }
     }
 }
 

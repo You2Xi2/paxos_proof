@@ -70,6 +70,8 @@ predicate Agreement_Chosen_Inv_Common(c:Constants, ds:DistrSys)
     // Leader state
     && LdrAcceptsSetCorrespondToAcceptMsg(c, ds)
     && LdrPromisesSetCorrespondToPromiseMsg(c, ds)
+    && LdrPromisesSetHaveLeaderBallot(c, ds)
+    && LdrPromisesSetHaveUniqueSrc(c, ds)
 
     // Acceptor state
     && AccPromisedBallotLargerThanAccepted(c, ds)
@@ -306,8 +308,32 @@ predicate PromisesSetCorrespondToPromiseMsg(c:Constants, ds:DistrSys, i:int)
     requires c.WF() && ds.WF(c)
     requires c.ValidLdrIdx(i)
 {
-    forall p | p in ds.leaders[i].promises :: p in ds.network.sentPackets
+    forall p | p in ds.leaders[i].promises :: isPromisePkt(ds, p)
 }
+
+
+/* All l.promises collected by l have same ballot as l */
+predicate LdrPromisesSetHaveLeaderBallot(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall i | c.ValidLdrIdx(i) :: PromisesSetHaveBallotB(c, ds, i)
+}
+
+/* All l.promises collected by l has unique source */
+predicate LdrPromisesSetHaveUniqueSrc(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall i | c.ValidLdrIdx(i) :: UniqueSources(ds.leaders[i].promises)
+}
+
+
+predicate PromisesSetHaveBallotB(c:Constants, ds:DistrSys, i:int) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrIdx(i) 
+{
+    forall p | p in ds.leaders[i].promises && p.msg.Promise? :: p.msg.bal == ds.leaders[i].ballot
+}
+
 
 /* Acceptor promised ballot always at least as large as accepted ballot */
 predicate AccPromisedBallotLargerThanAccepted(c:Constants, ds:DistrSys) 

@@ -114,6 +114,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     assert AcceptMsgImpliesAccepted(c, ds');   
     assert AcceptedImpliesAcceptMsg(c, ds');  
     assert AcceptMsgImpliesProposeMsg(c, ds');   
+    assert ProposeMsgHasBalIdxAsSource(c, ds');
 
     AgreementChosenInv_LdrAction_LeaderP2ImpliesQuorumOfPromise(c, ds, ds', actor, recvIos, sendIos);
     assert LeaderP2ImpliesQuorumOfPromise(c, ds');      
@@ -286,6 +287,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires LdrBallotBelongsToItself(c, ds)
     requires LeaderP1ImpliesAllProposeHasLtBal(c, ds)
+    requires ProposeMsgHasBalIdxAsSource(c, ds)
     requires c.ValidLdrId(actor)
     ensures OneValuePerBallot(c, ds')
 {
@@ -302,11 +304,10 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires LeaderP1ImpliesAllProposeHasLtBal(c, ds)
     requires LdrBallotBelongsToItself(c, ds)
+    requires ProposeMsgHasBalIdxAsSource(c, ds)
     requires c.ValidLdrId(actor)
     ensures OneValuePerBallot_ProposeMsgAndLeader(c, ds')
 {
-    assume forall p | isProposePkt(ds, p) :: p.src == Id(Ldr, p.msg.bal.idx); // TODO
-
     forall l_idx, prop | 
         && c.ValidLdrIdx(l_idx)
         && LeaderInPhase2(c, ds', l_idx) 

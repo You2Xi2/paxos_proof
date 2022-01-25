@@ -84,6 +84,7 @@ predicate Agreement_Chosen_Inv_Common(c:Constants, ds:DistrSys)
     && PromiseVBImpliesAcceptMsg(c, ds)
     && PromisedImpliesNoMoreAccepts(c, ds)
     && ProposeMsgImpliesQuorumOfPromise(c, ds)
+    && ProposeMsgHasBalIdxAsSource(c, ds)
     && AcceptedImpliesAcceptMsg(c, ds)
     && AcceptMsgImpliesProposeMsg(c, ds)
     && LeaderP1ImpliesAllProposeHasLtBal(c, ds)
@@ -315,6 +316,13 @@ predicate ProposeMsgImpliesQuorumOfPromise(c:Constants, ds:DistrSys)
             || PromisePktWithHighestBallot(qrm).msg.vb.v == Nil
         )
     )
+}
+
+/* For each Propose(v, b) message, the ballot b identifies the sender */
+predicate ProposeMsgHasBalIdxAsSource(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall p | isProposePkt(ds, p) :: p.src == Id(Ldr, p.msg.bal.idx)
 }
 
 

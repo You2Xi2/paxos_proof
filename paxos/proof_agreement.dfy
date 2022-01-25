@@ -101,8 +101,9 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     AgreementChosenInv_LdrAction_LdrPromisesSetHaveUniqueSrc(c, ds, ds', actor, recvIos, sendIos);
     assert LdrPromisesSetHaveUniqueSrc(c, ds');
     assert LdrBallotBelongsToItself(c, ds');
-    AgreementChosenInv_LdrAction_LeaderP1ImpliesAllProposeHasSmallerBal(c, ds, ds', actor, recvIos, sendIos);
-    assert LeaderP1ImpliesAllProposeHasSmallerBal(c, ds');
+    AgreementChosenInv_LdrAction_LeaderAndProposeBals(c, ds, ds', actor, recvIos, sendIos);
+    assert LeaderP1ImpliesAllProposeHasLtBal(c, ds');
+    assert LeaderP2ImpliesAllProposeHasLtEqBal(c, ds');
     
     // Acceptor state
     assert AccPromisedBallotLargerThanAccepted(c, ds');    
@@ -172,22 +173,18 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 }
 
 
-lemma AgreementChosenInv_LdrAction_LeaderP1ImpliesAllProposeHasSmallerBal(
+lemma AgreementChosenInv_LdrAction_LeaderAndProposeBals(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>) 
-    requires Agreement_Chosen_Inv(c, ds)
+    requires c.WF() && ds.WF(c)
+    requires LeaderP1ImpliesAllProposeHasLtBal(c, ds)
+    requires LeaderP2ImpliesAllProposeHasLtEqBal(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidLdrId(actor)
-    ensures LeaderP1ImpliesAllProposeHasSmallerBal(c, ds')
-{
-    forall id | c.ValidLdrId(id) && LeaderInPhase1(c, ds', id.idx)
-    ensures AllProposalsFromSourceBalLt(c, ds', id) 
-    {
-        // TODO
-        assume false;
-    }
-}
+    ensures LeaderP1ImpliesAllProposeHasLtBal(c, ds')
+    ensures LeaderP2ImpliesAllProposeHasLtEqBal(c, ds')
+{}
 
 
 lemma AgreementChosenInv_LdrAction_LeaderP2ImpliesQuorumOfPromise(
@@ -288,7 +285,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires LdrBallotBelongsToItself(c, ds)
-    requires LeaderP1ImpliesAllProposeHasSmallerBal(c, ds)
+    requires LeaderP1ImpliesAllProposeHasLtBal(c, ds)
     requires c.ValidLdrId(actor)
     ensures OneValuePerBallot(c, ds')
 {
@@ -303,7 +300,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires LeaderP1ImpliesAllProposeHasSmallerBal(c, ds)
+    requires LeaderP1ImpliesAllProposeHasLtBal(c, ds)
     requires LdrBallotBelongsToItself(c, ds)
     requires c.ValidLdrId(actor)
     ensures OneValuePerBallot_ProposeMsgAndLeader(c, ds')
@@ -329,7 +326,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
                         case Promise(bal, valbal) => 
                             if recvIos[0].msg .bal == l.ballot && !exists p :: p in l.promises && p.src == recvIos[0].src {
                                 if |l.promises| == 2*l.consts.f {
-                                    // This is where we need LeaderP1ImpliesAllProposeHasSmallerBal
+                                    // This is where we need LeaderP1ImpliesAllProposeHasLtBal
                                     lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
                                     assert prop.src == Id(Ldr, prop.msg.bal.idx);
                                     assert false;

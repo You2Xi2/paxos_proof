@@ -86,7 +86,8 @@ predicate Agreement_Chosen_Inv_Common(c:Constants, ds:DistrSys)
     && ProposeMsgImpliesQuorumOfPromise(c, ds)
     && AcceptedImpliesAcceptMsg(c, ds)
     && AcceptMsgImpliesProposeMsg(c, ds)
-    && LeaderP1ImpliesAllProposeHasSmallerBal(c, ds)
+    && LeaderP1ImpliesAllProposeHasLtBal(c, ds)
+    && LeaderP2ImpliesAllProposeHasLtEqBal(c, ds)
     && LeaderP2ImpliesQuorumOfPromise(c, ds)    
 }
 
@@ -246,7 +247,7 @@ predicate AcceptMsgImpliesProposeMsg(c:Constants, ds:DistrSys)
 
 /* For each leader in phase 1, all proposals in the network has ballot strictly less than
 * current ballot */
-predicate LeaderP1ImpliesAllProposeHasSmallerBal(c:Constants, ds:DistrSys) 
+predicate LeaderP1ImpliesAllProposeHasLtBal(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
     forall id | c.ValidLdrId(id) && LeaderInPhase1(c, ds, id.idx)
@@ -259,6 +260,23 @@ predicate AllProposalsFromSourceBalLt(c:Constants, ds:DistrSys, id:Id)
 {
     forall p | isProposePkt(ds, p) && p.src == id 
     :: BalLt(p.msg.bal, ds.leaders[id.idx].ballot)
+}
+
+/* For each leader in phase 2, all proposals in the network has ballot strictly less than
+* current ballot */
+predicate LeaderP2ImpliesAllProposeHasLtEqBal(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall id | c.ValidLdrId(id) && LeaderInPhase2(c, ds, id.idx)
+    :: AllProposalsFromSourceBalLtEq(c, ds, id) 
+}
+
+predicate AllProposalsFromSourceBalLtEq(c:Constants, ds:DistrSys, id:Id) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrId(id)
+{
+    forall p | isProposePkt(ds, p) && p.src == id 
+    :: BalLtEq(p.msg.bal, ds.leaders[id.idx].ballot)
 }
 
 

@@ -27,26 +27,19 @@ lemma InitImpliesAgreementChosenInv(c:Constants, ds:DistrSys)
 
 
 lemma NextPreservesTrivialities(c:Constants, ds:DistrSys, ds':DistrSys) 
-    requires Agreement_Chosen_Inv(c, ds)
+    requires c.WF() && ds.WF(c)
+    requires ds'.WF(c)
     requires Next(c, ds, ds')
     requires Trivialities(c, ds)
     ensures Trivialities(c, ds')
 {
-    // TODO: This is just tedious, so assume for now.
-    assume false; 
     var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
     if actor.agt == Acc {
         assert recvIos[0] in ds.network.sentPackets;
     }
-
     forall p | p in ds'.network.sentPackets
     ensures ValidPacketSourceDest(c, ds', p)
-    {
-
-    }
-    assert AllPacketsValid(c, ds');
-    assert BallotBottomness_ValueNilness(c, ds');
-    
+    {}    
 }
 
 

@@ -299,6 +299,13 @@ predicate ValidLeaderDest(c:Constants, ds:DistrSys, p:Packet)
     && c.ValidLdrIdx(p.dst.idx)
 }
 
+predicate LeaderInPhase1(c:Constants, ds:DistrSys, idx:int) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrIdx(idx)
+{
+    ds.leaders[idx].state == P1a || ds.leaders[idx].state == P1b
+}
+
 
 predicate LeaderInPhase2(c:Constants, ds:DistrSys, idx:int) 
     requires c.WF() && ds.WF(c)

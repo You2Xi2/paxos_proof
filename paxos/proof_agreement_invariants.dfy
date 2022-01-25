@@ -72,6 +72,7 @@ predicate Agreement_Chosen_Inv_Common(c:Constants, ds:DistrSys)
     && LdrPromisesSetCorrespondToPromiseMsg(c, ds)
     && LdrPromisesSetHaveLeaderBallot(c, ds)
     && LdrPromisesSetHaveUniqueSrc(c, ds)
+    && LdrBallotBelongsToItself(c, ds)
 
     // Acceptor state
     && AccPromisedBallotLargerThanAccepted(c, ds)
@@ -85,6 +86,7 @@ predicate Agreement_Chosen_Inv_Common(c:Constants, ds:DistrSys)
     && ProposeMsgImpliesQuorumOfPromise(c, ds)
     && AcceptedImpliesAcceptMsg(c, ds)
     && AcceptMsgImpliesProposeMsg(c, ds)
+    && LeaderP1ImpliesAllProposeHasSmallerBal(c, ds)
     && LeaderP2ImpliesQuorumOfPromise(c, ds)    
 }
 
@@ -108,14 +110,14 @@ predicate Agreement_Chosen_Inv_SomeValChosen(c:Constants, ds:DistrSys, b:Ballot,
 predicate OneValuePerBallot(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    && OneValuePerBallot_Leaders(c, ds)
+    && OneValuePerBallot_UniqueLdrBals(c, ds)
     && OneValuePerBallot_PromiseMsg(c, ds)
     && OneValuePerBallot_ProposeMsg(c, ds)
     && OneValuePerBallot_AcceptMsg(c, ds)
     && OneValuePerBallot_ProposeMsgAndLeader(c, ds)
 }
 
-predicate OneValuePerBallot_Leaders(c:Constants, ds:DistrSys) 
+predicate OneValuePerBallot_UniqueLdrBals(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
     forall l1, l2 | c.ValidLdrIdx(l1) && c.ValidLdrIdx(l2) && l1!=l2 
@@ -242,6 +244,23 @@ predicate AcceptMsgImpliesProposeMsg(c:Constants, ds:DistrSys)
     )
 }
 
+/* For each leader in phase 1, all proposals in the network has ballot strictly less than
+* current ballot */
+predicate LeaderP1ImpliesAllProposeHasSmallerBal(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall id | c.ValidLdrId(id) && LeaderInPhase1(c, ds, id.idx)
+    :: AllProposalsFromSourceBalLt(c, ds, id) 
+}
+
+predicate AllProposalsFromSourceBalLt(c:Constants, ds:DistrSys, id:Id) 
+    requires c.WF() && ds.WF(c)
+    requires c.ValidLdrId(id)
+{
+    forall p | isProposePkt(ds, p) && p.src == id 
+    :: BalLt(p.msg.bal, ds.leaders[id.idx].ballot)
+}
+
 
 /* For each leader in phase 2, there is a corresponding quorum of Promise packets 
 * in the network supporting it's ballot */
@@ -324,6 +343,14 @@ predicate LdrPromisesSetHaveUniqueSrc(c:Constants, ds:DistrSys)
     requires c.WF() && ds.WF(c)
 {
     forall i | c.ValidLdrIdx(i) :: UniqueSources(ds.leaders[i].promises)
+}
+
+/* Leader ballots have its own idx as identifier */
+predicate LdrBallotBelongsToItself(c:Constants, ds:DistrSys) 
+    requires c.WF() && ds.WF(c)
+{
+    forall i:nat | c.ValidLdrIdx(i) && ds.leaders[i].ballot != Bottom 
+    :: ds.leaders[i].ballot.idx == i
 }
 
 

@@ -39,6 +39,10 @@ echo "Verifying proof_helper.dfy"
 $dafny proof_helper.dfy
 
 echo ""
+echo "Verifying proof_agreement_chosenProperties.dfy"
+$dafny proof_agreement_chosenProperties.dfy
+
+echo ""
 echo "Verifying proof_agreement.dfy"
 $dafny proof_agreement.dfy
 

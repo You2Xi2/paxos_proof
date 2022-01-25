@@ -578,9 +578,10 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 
            
 
-lemma {:timeLimitMultipler 2 } AgreementChosenInv_AccAction_OneValuePerBallot(
+lemma AgreementChosenInv_AccAction_OneValuePerBallot(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
-    requires Agreement_Chosen_Inv(c, ds)
+    requires c.WF() && ds.WF(c)
+    requires OneValuePerBallot(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
@@ -589,8 +590,6 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires PromiseVBImpliesAcceptMsg(c, ds')
     requires c.ValidAccId(actor)
     ensures OneValuePerBallot(c, ds')
-{
-    assume false;
-}
+{}
 
 }

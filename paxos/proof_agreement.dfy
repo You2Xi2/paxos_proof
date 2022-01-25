@@ -287,19 +287,12 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires LdrBallotBelongsToItself(c, ds')
-    requires LeaderP1ImpliesAllProposeHasSmallerBal(c, ds')
-    requires AcceptMsgImpliesProposeMsg(c, ds')
-    requires PromiseVBImpliesAcceptMsg(c, ds')
+    requires LdrBallotBelongsToItself(c, ds)
+    requires LeaderP1ImpliesAllProposeHasSmallerBal(c, ds)
     requires c.ValidLdrId(actor)
     ensures OneValuePerBallot(c, ds')
 {
-    assert OneValuePerBallot_UniqueLdrBals(c, ds'); 
-    assert OneValuePerBallot_PromiseMsg(c, ds');  
-    assert OneValuePerBallot_ProposeMsg(c, ds');
-    assert OneValuePerBallot_AcceptMsg(c, ds');
     AgreementChosenInv_LdrAction_OneValuePerBallot_ProposeMsgAndLeader(c, ds, ds', actor, recvIos, sendIos);
-    assert OneValuePerBallot_ProposeMsgAndLeader(c, ds');
 }
 
 
@@ -310,11 +303,11 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires LdrBallotBelongsToItself(c, ds')
+    requires LeaderP1ImpliesAllProposeHasSmallerBal(c, ds)
+    requires LdrBallotBelongsToItself(c, ds)
     requires c.ValidLdrId(actor)
     ensures OneValuePerBallot_ProposeMsgAndLeader(c, ds')
 {
-    assume LeaderP1ImpliesAllProposeHasSmallerBal(c, ds);  // TODO
     assume forall p | isProposePkt(ds, p) :: p.src == Id(Ldr, p.msg.bal.idx); // TODO
 
     forall l_idx, prop | 

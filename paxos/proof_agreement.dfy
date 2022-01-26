@@ -201,7 +201,8 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
             var l, l' := ds.leaders[idx], ds'.leaders[idx];
             match l.state {
                 case P1a => 
-                    assert !LeaderInPhase2(c, ds', idx);
+                    lemma_LdrP1aGoToP1(c, ds, ds', actor, recvIos, sendIos);
+                    assert false;
                 case P1b => {
                     if recvIos[0].msg.Promise? {
                         var src, msg := recvIos[0].src, recvIos[0].msg;
@@ -314,8 +315,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
             var l, l' := ds.leaders[l_idx], ds'.leaders[l_idx];
             match l.state {
                 case P1a => 
-                    assert l'.state == P1a || l'.state == P1b;
-                    assert !LeaderInPhase2(c, ds', l_idx);
+                    lemma_LdrP1aGoToP1(c, ds, ds', actor, recvIos, sendIos);
                     assert false;
                 case P1b => {
                     match recvIos[0].msg 

@@ -53,6 +53,21 @@ import opened Proof_Agreement_Invs
 // }
 
 
+/* If a Promise qrm has seen (b, v), and all larger witnesses has value v, then 
+* PromisePktWithHighestBallot(qrm) has value v */
+lemma lemma_QrmSeenBAndAllLargerBalsHaveSameV(c:Constants, ds:DistrSys, qrm:set<Packet>, b':Ballot, b:Ballot, v:Value)
+    requires c.WF() && ds.WF(c)
+    requires BalLtEq(b, b')
+    requires forall p | p in qrm :: p.msg.Promise?
+    requires QuorumOfPromiseMsgs(c, ds, qrm, b')
+    requires QuorumHasSeenB(c, ds, qrm, b);
+    requires forall p | isPromisePkt(ds, p) && BalLtEq(b, p.msg.vb.b) :: p.msg.vb.v == v
+    ensures PromisePktWithHighestBallot(qrm).msg.vb.v == v
+{
+    assume false;
+}
+
+
 lemma lemma_IdSetCover(c:Constants, ds:DistrSys, qrm1:set<Id>, qrm2:set<Id>, e:Id)
     requires c.WF() && ds.WF(c)
     requires AllPacketsValid(c, ds)
@@ -135,6 +150,45 @@ lemma lemma_ChosenImpliesProposeMsg(c:Constants, ds:DistrSys, b:Ballot, v:Value)
 /*****************************************************************************************
 *                                  Two State Helpers                                     *
 *****************************************************************************************/
+
+
+
+/* A leader in phase P1a must remain in Phase 1 */
+lemma lemma_LdrP1aGoToP1(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
+    requires c.WF() && ds.WF(c)
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidLdrId(actor)
+    requires ds.leaders[actor.idx].state == P1a
+    ensures ds'.leaders[actor.idx].state == P1a || ds'.leaders[actor.idx].state == P1b
+    ensures !LeaderInPhase2(c, ds', actor.idx) 
+{}
+
+/* A leader in phase P2b must have been in Phase2 */
+lemma lemma_LdrP2GoToP2b(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
+    requires c.WF() && ds.WF(c)
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidLdrId(actor)
+    requires ds'.leaders[actor.idx].state == P2b
+    ensures ds.leaders[actor.idx].state == P2a || ds'.leaders[actor.idx].state == P2b
+    ensures LeaderInPhase2(c, ds, actor.idx) 
+{}
+
+/* A leader running LeaderProcessAccept does not change value and ballot */
+lemma lemma_LdrProcessAcceptDoesNotChangeValueAndBallot(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
+    requires c.WF() && ds.WF(c)
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidLdrId(actor)
+    requires ds.leaders[actor.idx].state == P2b
+    requires recvIos[0].msg.Accept?
+    ensures ds'.leaders[actor.idx].val ==  ds.leaders[actor.idx].val;
+    ensures ds'.leaders[actor.idx].ballot ==  ds.leaders[actor.idx].ballot;
+{}
 
 
 /* If no new Accept messages sent in this step, then no new (b, v)'s are chosen. */
@@ -389,6 +443,11 @@ lemma lemma_Set_MinusElem<T>(S:set<T>, e:T, n:int)
     requires |S| == n && n > 0
     requires e in S
     ensures |S - {e}| == n - 1
+{}
+
+lemma lemma_Set_Union_Property<T>(S:set<T>, S':set<T>, e:T) 
+    requires S' == S + {e}
+    ensures forall x | x in S' :: x == e || x in S
 {}
 
 /*****************************************************************************************

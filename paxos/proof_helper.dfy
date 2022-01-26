@@ -63,9 +63,7 @@ lemma lemma_QrmSeenBAndAllLargerBalsHaveSameV(c:Constants, ds:DistrSys, qrm:set<
     requires QuorumHasSeenB(c, qrm, b);
     requires forall p | isPromisePkt(ds, p) && BalLtEq(b, p.msg.vb.b) :: p.msg.vb.v == v
     ensures PromisePktWithHighestBallot(qrm).msg.vb.v == v
-{
-    assume false;
-}
+{}
 
 
 lemma lemma_IdSetCover(c:Constants, ds:DistrSys, qrm1:set<Id>, qrm2:set<Id>, e:Id)

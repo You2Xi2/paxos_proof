@@ -6,7 +6,7 @@ include "proof_helper.dfy"
 include "proof_axioms.dfy"
 include "proof_agreement_invariants.dfy"
 
-module Proof_Agreement_ChosenProperties {
+module Proof_Agreement_ChosenProperties_1 {
 import opened Network
 import opened Agents
 import opened Types
@@ -16,7 +16,7 @@ import opened Proof_Axioms
 import opened Proof_Agreement_Invs
 
 
-// //////////////          Agreement Sub-Lemma: No existing decision          ///////////////
+/////////////////        Agreement Sub-Lemma: No existing decision         ///////////////
 
 
 lemma AgreementChosenInv_NoneChosen(c:Constants, ds:DistrSys, ds':DistrSys) 

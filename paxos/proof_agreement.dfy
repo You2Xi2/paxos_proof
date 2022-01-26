@@ -5,7 +5,8 @@ include "synod.dfy"
 include "proof_helper.dfy"
 include "proof_axioms.dfy"
 include "proof_agreement_invariants.dfy"
-include "proof_agreement_chosenProperties.dfy"
+include "proof_agreement_chosenProperties1.dfy"
+include "proof_agreement_chosenProperties2.dfy"
 
 module Proof_Agreement {
 import opened Network
@@ -15,7 +16,8 @@ import opened Synod
 import opened Proof_Helper
 import opened Proof_Axioms
 import opened Proof_Agreement_Invs
-import opened Proof_Agreement_ChosenProperties
+import opened Proof_Agreement_ChosenProperties_1
+import opened Proof_Agreement_ChosenProperties_2
 
 
 
@@ -53,9 +55,7 @@ lemma NextPreservesAgreementChosenInv(c:Constants, ds:DistrSys, ds':DistrSys)
     AgreementChosenInv_Common(c, ds, ds');
 
     if SomeValueChosen(c, ds) {
-        // TODO
-        assume false;
-        assert Agreement_Chosen_Inv_ChosenProperties(c, ds');
+        AgreementChosenInv_SomeChosen(c, ds, ds');
     } else {
         AgreementChosenInv_NoneChosen(c, ds, ds');
     }
@@ -87,7 +87,7 @@ lemma AgreementChosenInv_Safety(c:Constants, ds:DistrSys, ds':DistrSys)
     }
 }
 
-// //////////////          Agreement Sub-Lemma: Common Invariants          ///////////////
+////////////////          Agreement Sub-Lemma: Common Invariants          ////////////////
 
 lemma AgreementChosenInv_Common(c:Constants, ds:DistrSys, ds':DistrSys) 
     requires Agreement_Chosen_Inv(c, ds)

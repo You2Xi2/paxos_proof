@@ -60,7 +60,7 @@ lemma lemma_QrmSeenBAndAllLargerBalsHaveSameV(c:Constants, ds:DistrSys, qrm:set<
     requires BalLtEq(b, b')
     requires forall p | p in qrm :: p.msg.Promise?
     requires QuorumOfPromiseMsgs(c, ds, qrm, b')
-    requires QuorumHasSeenB(c, ds, qrm, b);
+    requires QuorumHasSeenB(c, qrm, b);
     requires forall p | isPromisePkt(ds, p) && BalLtEq(b, p.msg.vb.b) :: p.msg.vb.v == v
     ensures PromisePktWithHighestBallot(qrm).msg.vb.v == v
 {

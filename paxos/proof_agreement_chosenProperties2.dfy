@@ -52,23 +52,12 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
     {
         lemma_NoNewAcceptsImpliesNoNewChosen(c, ds, ds');
-        assert Chosen(c, ds, b, v);
         AgreementChosenInv_SomeChosen_LdrAction_LargerBallotPhase2LeadersV(c, ds, ds', actor, recvIos, sendIos, b, v);
         AgreementChosenInv_SomeChosen_LdrAction_LargerBallotAcceptors(c, ds, ds', actor, recvIos, sendIos, b, v);
         AgreementChosenInv_SomeChosen_LdrAction_LargerBallotAcceptMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);       
         AgreementChosenInv_SomeChosen_LdrAction_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);   
         AgreementChosenInv_SomeChosen_LdrAction_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b, v); 
-        assert LargerBallotPhase2LeadersV(c, ds', b, v);
-        assert LargerBallotAcceptors(c, ds', b, v);
-        assert LargerBallotAcceptMsgs(c, ds', b, v);
-        assert LargerBallotPromiseMsgs(c, ds', b, v);
-        assert LargerBallotProposeMsgs(c, ds', b, v);
-
-        
-        assume LargerBallotsPromiseQrms(c, ds', b);
-
-
-        assert SameBallotLeaderNotInPhase1(c, ds', b);
+        AgreementChosenInv_SomeChosen_LdrAction_LargerBallotsPromiseQrms(c, ds, ds', actor, recvIos, sendIos, b, v); 
     }
 }
 
@@ -183,7 +172,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
                     }
                     assert QuorumOfPromiseMsgs(c, ds, promises, l.ballot);
                     if BalLt(b, l.ballot) {
-                        assert QuorumHasSeenB(c, ds, promises, b);
+                        assert QuorumHasSeenB(c, promises, b);
                         lemma_QrmSeenBAndAllLargerBalsHaveSameV(c, ds, promises, l.ballot, b, v);
                     } else {
                         assert false;
@@ -278,6 +267,32 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 {}
 
 
+lemma AgreementChosenInv_SomeChosen_LdrAction_LargerBallotsPromiseQrms(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+    requires c.WF() && ds.WF(c)
+    requires Trivialities(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_ChosenProperties(c, ds)
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidLdrId(actor)
+    requires SomeValueChosen(c, ds)
+    requires Chosen(c, ds, b, v) 
+    requires Chosen(c, ds', b, v) 
+    ensures LargerBallotsPromiseQrms(c, ds', b)
+{
+    forall b' | BalLt(b, b') 
+    ensures LargerBalQuorumHasSeenB(c, ds', b, b')
+    {
+        forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds', qrm, b') 
+        ensures QuorumHasSeenB(c, qrm, b)
+        {
+            assert forall p | p in qrm :: p in ds.network.sentPackets;
+            assert QuorumOfPromiseMsgs(c, ds, qrm, b');
+            assert QuorumHasSeenB(c, qrm, b);
+        }
+    }
+}
 
 
 }

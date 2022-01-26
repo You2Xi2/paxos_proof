@@ -103,7 +103,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     ensures LargerBalQuorumHasSeenB(c, ds', b, b')
     {
         forall qrm':set<Packet> | QuorumOfPromiseMsgs(c, ds', qrm', b') 
-        ensures QuorumHasSeenB(c, ds', qrm', b){
+        ensures QuorumHasSeenB(c, qrm', b){
             AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotsPromiseQrms_helper(c, ds, ds', actor, recvIos, sendIos, b, b', qrm', v);
         }
     }
@@ -129,7 +129,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Chosen(c, ds', b, v)
     requires BalLt(b, b') 
     requires QuorumOfPromiseMsgs(c, ds', qrm', b')
-    ensures QuorumHasSeenB(c, ds', qrm', b)
+    ensures QuorumHasSeenB(c, qrm', b)
 {
     /* Proof: Suppose otherwise. Then qrm' is in ds, and every Prom in qrm' has promised
     * b', and saw < b. By PromisedImpliesNoMoreAccepts, this means that no Accept(b) messages
@@ -140,7 +140,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     *   1. If actor is in qrm', it can't accept (b, v). Hence (b,v) not chosen in ds'. C!
     *   2. If actor is in qrm, |qrm| remains f in ds'. C!
     */
-    if !QuorumHasSeenB(c, ds', qrm', b) {
+    if !QuorumHasSeenB(c, qrm', b) {
         forall prom | prom in qrm' ensures BalLt(prom.msg.vb.b, b) {}
         lemma_NoPromiseSentInNonPromiseStep(c, ds, ds', actor, recvIos, sendIos);
         assert QuorumOfPromiseMsgs(c, ds, qrm', b');
@@ -273,7 +273,7 @@ accpt:Packet, b1:Ballot, v':Value)
         // The highest ballot in qrm1 is not Nil
         if prom1.msg.vb.v == Nil {
             lemma_HighestPromiseValNilImpliesAllBottom(qrm1);
-            assert !QuorumHasSeenB(c, ds', qrm1, b);
+            assert !QuorumHasSeenB(c, qrm1, b);
             assert false;
         }
         assert isPromisePkt(ds', prom1) && prom1.msg.vb.b != Bottom;
@@ -421,7 +421,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
                                 || PromisePktWithHighestBallot(qrm').msg.vb.v == Nil);
                 if PromisePktWithHighestBallot(qrm').msg.vb.v == Nil {
                     lemma_HighestPromiseValNilImpliesAllBottom(qrm');
-                    assert !QuorumHasSeenB(c, ds', qrm', b);
+                    assert !QuorumHasSeenB(c, qrm', b);
                     assert false;
                 } else {
                     var pivot:Packet :| pivot in qrm' && BalLtEq(b, pivot.msg.vb.b);

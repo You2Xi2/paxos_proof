@@ -530,11 +530,10 @@ predicate LargerBalQuorumHasSeenB(c:Constants, ds:DistrSys, b:Ballot, b':Ballot)
     requires c.WF() && ds.WF(c)
 {
     forall qrm:set<Packet> | QuorumOfPromiseMsgs(c, ds, qrm, b') 
-    :: QuorumHasSeenB(c, ds, qrm, b)
+    :: QuorumHasSeenB(c, qrm, b)
 }
 
-predicate QuorumHasSeenB(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot) 
-    requires c.WF() && ds.WF(c)
+predicate QuorumHasSeenB(c:Constants, qrm:set<Packet>, b:Ballot) 
     requires forall p | p in qrm :: p.msg.Promise?
 {
     exists p :: p in qrm && BalLtEq(b, p.msg.vb.b)

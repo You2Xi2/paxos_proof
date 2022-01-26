@@ -112,35 +112,11 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires c.ValidLdrId(actor)
     ensures Agreement_Chosen_Inv_Common(c, ds')
 {
-    // Leader state
     AgreementChosenInv_LdrAction_LdrAcceptsSetCorrespondToAcceptMsg(c, ds, ds', actor, recvIos, sendIos);
-    assert LdrAcceptsSetCorrespondToAcceptMsg(c, ds');   
-    assert LdrPromisesSetCorrespondToPromiseMsg(c, ds');
-    assert LdrPromisesSetHaveLeaderBallot(c, ds');
     AgreementChosenInv_LdrAction_LdrPromisesSetHaveUniqueSrc(c, ds, ds', actor, recvIos, sendIos);
-    assert LdrPromisesSetHaveUniqueSrc(c, ds');
-    assert LdrBallotBelongsToItself(c, ds');
     AgreementChosenInv_LdrAction_LeaderAndProposeBals(c, ds, ds', actor, recvIos, sendIos);
-    assert LeaderP1ImpliesAllProposeHasLtBal(c, ds');
-    assert LeaderP2ImpliesAllProposeHasLtEqBal(c, ds');
-    
-    // Acceptor state
-    assert AccPromisedBallotLargerThanAccepted(c, ds');    
-
-    // Messages
-    assert PromiseMsgBalLargerThanAcceptedItSees(c, ds');   
-    assert PromiseVBImpliesAcceptMsg(c, ds');             
-    assert AcceptMsgImpliesAccepted(c, ds');   
-    assert AcceptedImpliesAcceptMsg(c, ds');  
-    assert AcceptMsgImpliesProposeMsg(c, ds');   
-    assert ProposeMsgHasBalIdxAsSource(c, ds');
-
     AgreementChosenInv_LdrAction_LeaderP2ImpliesQuorumOfPromise(c, ds, ds', actor, recvIos, sendIos);
-    assert LeaderP2ImpliesQuorumOfPromise(c, ds');      
-    assert ProposeMsgImpliesQuorumOfPromise(c, ds');      
-    assert PromisedImpliesNoMoreAccepts(c, ds');  
     AgreementChosenInv_LdrAction_OneValuePerBallot(c, ds, ds', actor, recvIos, sendIos);
-    assert OneValuePerBallot(c, ds');
 }
 
 lemma AgreementChosenInv_AccAction(

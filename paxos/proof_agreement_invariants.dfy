@@ -322,7 +322,7 @@ predicate ProposeMsgImpliesQuorumOfPromise(c:Constants, ds:DistrSys)
 predicate ProposeMsgHasBalIdxAsSource(c:Constants, ds:DistrSys) 
     requires c.WF() && ds.WF(c)
 {
-    forall p | isProposePkt(ds, p) :: p.src == Id(Ldr, p.msg.bal.idx)
+    forall p | isProposePkt(ds, p) && p.msg.bal.Ballot? :: p.src == Id(Ldr, p.msg.bal.idx)
 }
 
 

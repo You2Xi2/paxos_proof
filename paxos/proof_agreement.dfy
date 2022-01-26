@@ -28,10 +28,10 @@ lemma InitImpliesAgreementChosenInv(c:Constants, ds:DistrSys)
 
 lemma NextPreservesTrivialities(c:Constants, ds:DistrSys, ds':DistrSys) 
     requires c.WF() && ds.WF(c)
-    requires ds'.WF(c)
     requires Next(c, ds, ds')
     requires Trivialities(c, ds)
     ensures Trivialities(c, ds')
+    ensures ds'.WF(c)
 {
     var actor, recvIos:seq<Packet>, sendIos :| PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos);
     if actor.agt == Acc {
@@ -55,10 +55,36 @@ lemma NextPreservesAgreementChosenInv(c:Constants, ds:DistrSys, ds':DistrSys)
     if SomeValueChosen(c, ds) {
         // TODO
         assume false;
+        assert Agreement_Chosen_Inv_ChosenProperties(c, ds');
     } else {
         AgreementChosenInv_NoneChosen(c, ds, ds');
     }
-    assume Agreement_Chosen_Safety(c, ds'); // TODO
+    AgreementChosenInv_Safety(c, ds, ds');
+}
+
+lemma AgreementChosenInv_Safety(c:Constants, ds:DistrSys, ds':DistrSys) 
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c)
+    requires Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_Common(c, ds')
+    requires Agreement_Chosen_Inv_ChosenProperties(c, ds')
+    requires Next(c, ds, ds')
+    ensures Agreement_Chosen_Safety(c, ds')
+{
+    forall b1, b2, v1, v2 | Chosen(c, ds', b1, v1) && Chosen(c, ds', b2, v2)
+    ensures v1 == v2
+    {
+        if b1 != b2 {
+            if BalLt(b1, b2) {
+                assert v1 == v2;
+            } else if BalLt(b2, b1) {
+                assert v1 == v2;
+            } else {
+                assert b1 == b2;
+                assert false;
+            }
+        }
+    }
 }
 
 // //////////////          Agreement Sub-Lemma: Common Invariants          ///////////////

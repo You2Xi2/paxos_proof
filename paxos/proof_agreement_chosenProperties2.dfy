@@ -56,14 +56,15 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
         AgreementChosenInv_SomeChosen_LdrAction_LargerBallotPhase2LeadersV(c, ds, ds', actor, recvIos, sendIos, b, v);
         AgreementChosenInv_SomeChosen_LdrAction_LargerBallotAcceptors(c, ds, ds', actor, recvIos, sendIos, b, v);
         AgreementChosenInv_SomeChosen_LdrAction_LargerBallotAcceptMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);       
+        AgreementChosenInv_SomeChosen_LdrAction_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);   
+        AgreementChosenInv_SomeChosen_LdrAction_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b, v); 
         assert LargerBallotPhase2LeadersV(c, ds', b, v);
         assert LargerBallotAcceptors(c, ds', b, v);
         assert LargerBallotAcceptMsgs(c, ds', b, v);
+        assert LargerBallotPromiseMsgs(c, ds', b, v);
+        assert LargerBallotProposeMsgs(c, ds', b, v);
 
-
-
-        assume LargerBallotPromiseMsgs(c, ds', b, v);
-        assume LargerBallotProposeMsgs(c, ds', b, v);
+        
         assume LargerBallotsPromiseQrms(c, ds', b);
 
 
@@ -243,5 +244,40 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Chosen(c, ds', b, v) 
     ensures LargerBallotAcceptMsgs(c, ds', b, v)
 {}
+
+
+lemma AgreementChosenInv_SomeChosen_LdrAction_LargerBallotPromiseMsgs(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+    requires c.WF() && ds.WF(c)
+    requires Trivialities(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_ChosenProperties(c, ds)
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidLdrId(actor)
+    requires SomeValueChosen(c, ds)
+    requires Chosen(c, ds, b, v) 
+    requires Chosen(c, ds', b, v) 
+    ensures LargerBallotPromiseMsgs(c, ds', b, v)
+{}
+
+
+lemma AgreementChosenInv_SomeChosen_LdrAction_LargerBallotProposeMsgs(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+    requires c.WF() && ds.WF(c)
+    requires Trivialities(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_ChosenProperties(c, ds)
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidLdrId(actor)
+    requires SomeValueChosen(c, ds)
+    requires Chosen(c, ds, b, v) 
+    requires Chosen(c, ds', b, v) 
+    ensures LargerBallotProposeMsgs(c, ds', b, v)
+{}
+
+
+
 
 }

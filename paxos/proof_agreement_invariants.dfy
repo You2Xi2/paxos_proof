@@ -105,6 +105,7 @@ predicate Agreement_Chosen_Inv_SomeValChosen(c:Constants, ds:DistrSys, b:Ballot,
     && LargerBallotPromiseMsgs(c, ds, b, v)
     && LargerBallotProposeMsgs(c, ds, b, v)
     && LargerBallotsPromiseQrms(c, ds, b)
+    && SameBallotLeaderNotInPhase1(c, ds, b)
 }
 
 
@@ -537,6 +538,15 @@ predicate QuorumHasSeenB(c:Constants, ds:DistrSys, qrm:set<Packet>, b:Ballot)
     requires forall p | p in qrm :: p.msg.Promise?
 {
     exists p :: p in qrm && BalLtEq(b, p.msg.vb.b)
+}
+
+
+/* If v is chosen with ballot b, then the leader with current ballot b cannot be in Phase1 */
+predicate SameBallotLeaderNotInPhase1(c:Constants, ds:DistrSys, b:Ballot) 
+    requires c.WF() && ds.WF(c)
+{
+    forall i | c.ValidLdrIdx(i) && ds.leaders[i].ballot == b
+    :: !LeaderInPhase1(c, ds, i)
 }
 
 // predicate LeaderHasQuorumOfAccepts(c:Constants, ds:DistrSys, i:int) 

@@ -54,12 +54,14 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
         AgreementChosenInv_SomeChosen_LdrAction_LargerBallotPhase2LeadersV(c, ds, ds', actor, recvIos, sendIos, b, v);
         assert LargerBallotPhase2LeadersV(c, ds', b, v);
 
-        assume false;
-        assert LargerBallotAcceptors(c, ds', b, v);
-        assert LargerBallotAcceptMsgs(c, ds', b, v);
-        assert LargerBallotPromiseMsgs(c, ds', b, v);
-        assert LargerBallotProposeMsgs(c, ds', b, v);
-        assert LargerBallotsPromiseQrms(c, ds', b);
+        assume LargerBallotAcceptors(c, ds', b, v);
+        assume LargerBallotAcceptMsgs(c, ds', b, v);
+        assume LargerBallotPromiseMsgs(c, ds', b, v);
+        assume LargerBallotProposeMsgs(c, ds', b, v);
+        assume LargerBallotsPromiseQrms(c, ds', b);
+
+        
+        assert SameBallotLeaderNotInPhase1(c, ds', b);
     }
 }
 
@@ -136,6 +138,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires LdrPromisesSetHaveLeaderBallot(c, ds)
     requires LargerBallotsPromiseQrms(c, ds, b)
     requires LargerBallotPromiseMsgs(c, ds, b, v)
+    requires SameBallotLeaderNotInPhase1(c, ds, b)
 
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
@@ -177,9 +180,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
                         assert QuorumHasSeenB(c, ds, promises, b);
                         lemma_QrmSeenBAndAllLargerBalsHaveSameV(c, ds, promises, l.ballot, b, v);
                     } else {
-                        assume false;
-                        // TODO
-                        /* chosen implies the no leader with same ballot can be in phase 1? */
+                        assert false;
                     }               
                 } else {
                     assert l'.state == l.state;

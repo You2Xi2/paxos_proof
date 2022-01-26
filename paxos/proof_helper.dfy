@@ -194,7 +194,8 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 /* If no new Accept messages sent in this step, then no new (b, v)'s are chosen. */
 lemma lemma_NoNewAcceptsImpliesNoNewChosen(
 c:Constants, ds:DistrSys, ds':DistrSys)
-    requires Agreement_Chosen_Inv(c, ds)
+    requires c.WF() && ds.WF(c)
+    requires Trivialities(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
     requires forall p:Packet | isAcceptPkt(ds', p) :: p in ds.network.sentPackets

@@ -220,6 +220,7 @@ lemma lemma_NewPacketsComeFromSendIos(
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     ensures forall p | p in ds'.network.sentPackets && p !in ds.network.sentPackets :: p in sendIos
     ensures forall p | p in sendIos :: p in ds'.network.sentPackets
+    ensures forall p | p in ds'.network.sentPackets && p !in sendIos :: p in ds.network.sentPackets
 {
     var e, e' := ds.network, ds'.network;
     var sendSet := set s | s in sendIos;
@@ -239,6 +240,8 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Chosen(c, ds', b, v)
     ensures recvIos[0].msg.Propose?
     ensures AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos)   
+    ensures sendIos[0] == Packet(actor, recvIos[0].src, Accept(b, v))
+    ensures sendIos[0] !in ds.network.sentPackets
 {}
 
 
@@ -424,6 +427,11 @@ lemma lemma_BalLtTransitivity2(b1:Ballot, b2:Ballot, b3:Ballot)
     ensures BalGt(b3, b1)
 {}
 
+lemma lemma_UnequalBallots(b1:Ballot, b2:Ballot) 
+    requires b1 != b2;
+    ensures BalLt(b1, b2) || BalLt(b2, b1)
+{}
+
 
 lemma lemma_SingleElemList1<T>(s:seq<T>, e:T) 
     requires |s| == 1;
@@ -437,6 +445,13 @@ lemma lemma_SingleElemList2<T>(s:seq<T>, e:T)
     ensures e == s[0]
 {}
 
+lemma lemma_SingleElemList3<T>(s:seq<T>, e:T, x:T) 
+    requires |s| == 1;
+    requires e in s
+    requires x != e
+    ensures x !in s
+{}
+
 
 lemma lemma_Set_MinusElem<T>(S:set<T>, e:T, n:int) 
     requires |S| == n && n > 0
@@ -448,6 +463,17 @@ lemma lemma_Set_Union_Property<T>(S:set<T>, S':set<T>, e:T)
     requires S' == S + {e}
     ensures forall x | x in S' :: x == e || x in S
 {}
+
+lemma lemma_Set_MultiElem<T>(S:set<T>, e:T) 
+    requires e in S
+    requires |S| >= 2
+    ensures exists x :: x in S && x != e
+{
+    var S' := S - {e};
+    assert |S'| > 0;
+    var x :| x in S';
+    assert x in S && x != e;
+}
 
 /*****************************************************************************************
 *                                        Utils                                           *

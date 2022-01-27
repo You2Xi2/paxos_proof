@@ -32,10 +32,135 @@ lemma AgreementChosenInv_SomeChosen(c:Constants, ds:DistrSys, ds':DistrSys)
         // If actor is a Leader
         AgreementChosenInv_SomeChosen_LdrAction(c, ds, ds', actor, recvIos, sendIos);
     } else {
-        // TODO
-        assume false;
+        // If actor is Acceptor
+        AgreementChosenInv_SomeChosen_AccAction(c, ds, ds', actor, recvIos, sendIos);
     }
 }
+
+
+lemma AgreementChosenInv_SomeChosen_AccAction(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Agreement_Chosen_Inv_Common(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires SomeValueChosen(c, ds)
+    ensures Agreement_Chosen_Inv_ChosenProperties(c, ds')
+{
+    forall b', v' | Chosen(c, ds', b', v') 
+    ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b', v')
+    {
+        // var b, v :| Chosen(c, ds, b, v);
+        assume LargerBallotsPromiseQrms(c, ds', b');    // TODO
+        assume LargerBallotAcceptMsgs(c, ds', b', v');  // TODO
+
+        AgreementChosenInv_SomeChosen_AccAction_LargerBallotAcceptors(c, ds, ds', actor, recvIos, sendIos, b', v');
+        assert LargerBallotAcceptors(c, ds', b', v');
+        assert LargerBallotPromiseMsgs(c, ds', b', v');
+
+
+        assume LargerBallotProposeMsgs(c, ds', b', v');
+        assume LargerBallotPhase2LeadersV(c, ds', b', v');
+        assume SameBallotLeaderNotInPhase1(c, ds', b');
+    }
+}
+
+
+lemma AgreementChosenInv_SomeChosen_AccAction_LargerBallotAcceptors(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b':Ballot, v':Value) 
+    requires c.WF() && ds.WF(c)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+
+    requires Chosen(c, ds', b', v')
+    requires Agreement_Chosen_Inv_Common(c, ds')
+    requires LargerBallotsPromiseQrms(c, ds', b')
+    requires LargerBallotAcceptMsgs(c, ds', b', v')
+    ensures LargerBallotAcceptors(c, ds', b', v')
+{}
+
+
+
+lemma AgreementChosenInv_SomeChosen_OldValueChosen(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+    requires Agreement_Chosen_Inv(c, ds)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires Chosen(c, ds, b, v) 
+    ensures forall b', v' | Chosen(c, ds', b', v') :: v' == v
+{
+    forall b', v' | Chosen(c, ds', b', v') 
+    ensures v' == v
+    {
+        if BalLtEq(b, b') {
+            if Chosen(c, ds, b', v') {
+                assert v' == v;
+            } else {
+                /* This must be an accept step that lead to (b', v') being chosen. There
+                * is at least one Accept(b', v') in ds. This msg has v' == v by LargerBallotAcceptMsgs
+                */
+                
+                var qrm' :| QuorumOfAcceptMsgs(c, ds', qrm', b') && AccPacketsHaveValueV(qrm', v');
+                lemma_NewChosenImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, b', v');
+                var new_pkt := sendIos[0];
+                assert new_pkt.msg.val == v';
+                
+                // Prove new_pkt must be in qrm'
+                if new_pkt !in qrm' {
+                    lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
+                    forall p | p in qrm' 
+                    ensures p in ds.network.sentPackets
+                    {
+                        lemma_SingleElemList3(sendIos, new_pkt, p);
+                    }
+                    assert Chosen(c, ds, b', v');
+                    assert false;
+                }
+
+                assert |qrm'| >= 2;
+                lemma_Set_MultiElem(qrm', new_pkt);
+                var old_accpt :| old_accpt in qrm' && old_accpt != new_pkt;
+                assert old_accpt.msg.val == v';
+                assert old_accpt in ds.network.sentPackets;
+                assert isAcceptPkt(ds, old_accpt) && BalLtEq(b, old_accpt.msg.bal);
+                assert old_accpt.msg.val == v;
+                assert v' == v;
+            }
+        } else {
+            assert BalLt(b', b);
+            if Chosen(c, ds, b', v') {
+                assert v' == v;
+            } else {
+
+            }
+            // TODO
+            assume false;
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 lemma AgreementChosenInv_SomeChosen_LdrAction(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)

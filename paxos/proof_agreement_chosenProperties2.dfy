@@ -51,33 +51,32 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires SomeValueChosen(c, ds)
     ensures Agreement_Chosen_Inv_ChosenProperties(c, ds')
 {
-    forall b', v' | Chosen(c, ds', b', v') 
-    ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b', v')
+    forall b, v | Chosen(c, ds', b, v) 
+    ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
     {
-        if Chosen(c, ds, b', v') {
-            assume false;
+        if Chosen(c, ds, b, v) {
+            assume LargerBallotsPromiseQrms(c, ds', b);
+            assume LargerBallotAcceptMsgs(c, ds', b, v);  
+            assume LargerBallotAcceptors(c, ds', b, v);
+            assume LargerBallotPromiseMsgs(c, ds', b, v);
+            assume LargerBallotProposeMsgs(c, ds', b, v);
+            assume LargerBallotPhase2LeadersV(c, ds', b, v);
+            assume SameBallotLeaderNotInPhase1(c, ds', b);
         } else {
-            lemma_NewChosenImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, b', v');
-            AgreementChosenInv_SomeChosen_AccAction_LargerBallotsPromiseQrms(c, ds, ds', actor, recvIos, sendIos, b', v');
-            AgreementChosenInv_SomeChosen_AccAction_LargerBallotAcceptMsgs(c, ds, ds', actor, recvIos, sendIos, b', v');
-            AgreementChosenInv_SomeChosen_AccAction_LargerBallotAcceptors(c, ds, ds', actor, recvIos, sendIos, b', v');
-            AgreementChosenInv_SomeChosen_AccAction_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b', v');
-            AgreementChosenInv_SomeChosen_AccAction_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b', v');
-            AgreementChosenInv_SomeChosen_AccAction_LargerBallotPhase2LeadersV(c, ds, ds', actor, recvIos, sendIos, b', v');
-            assert LargerBallotsPromiseQrms(c, ds', b');
-            assert LargerBallotAcceptMsgs(c, ds', b', v');  
-            assert LargerBallotAcceptors(c, ds', b', v');
-            assert LargerBallotPromiseMsgs(c, ds', b', v');
-            assert LargerBallotProposeMsgs(c, ds', b', v');
-            assert LargerBallotPhase2LeadersV(c, ds', b', v');
-            assert SameBallotLeaderNotInPhase1(c, ds', b');
+            lemma_NewChosenImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, b, v);
+            AgreementChosenInv_NewChosen_AccAction_LargerBallotsPromiseQrms(c, ds, ds', actor, recvIos, sendIos, b, v);
+            AgreementChosenInv_NewChosen_AccAction_LargerBallotAcceptMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
+            AgreementChosenInv_NewChosen_AccAction_LargerBallotAcceptors(c, ds, ds', actor, recvIos, sendIos, b, v);
+            AgreementChosenInv_NewChosen_AccAction_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
+            AgreementChosenInv_NewChosen_AccAction_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
+            AgreementChosenInv_NewChosen_AccAction_LargerBallotPhase2LeadersV(c, ds, ds', actor, recvIos, sendIos, b, v);
         }
     }
 }
 
 
-lemma AgreementChosenInv_SomeChosen_AccAction_LargerBallotsPromiseQrms(
-c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b':Ballot, v':Value) 
+lemma AgreementChosenInv_NewChosen_AccAction_LargerBallotsPromiseQrms(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
     requires Agreement_Chosen_Inv(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Agreement_Chosen_Inv_Common(c, ds')
@@ -86,15 +85,15 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires c.ValidAccId(actor)
     requires recvIos[0].msg.Propose?
     requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
-    requires Chosen(c, ds', b', v')
-    ensures LargerBallotsPromiseQrms(c, ds', b')
+    requires Chosen(c, ds', b, v)
+    ensures LargerBallotsPromiseQrms(c, ds', b)
 {
-    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotsPromiseQrms(c, ds, ds', actor, recvIos, sendIos, b', v');
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotsPromiseQrms(c, ds, ds', actor, recvIos, sendIos, b, v);
 }
 
 
-lemma AgreementChosenInv_SomeChosen_AccAction_LargerBallotAcceptMsgs(
-c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b':Ballot, v':Value) 
+lemma AgreementChosenInv_NewChosen_AccAction_LargerBallotAcceptMsgs(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
     requires Agreement_Chosen_Inv(c, ds)
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Agreement_Chosen_Inv_Common(c, ds')
@@ -104,21 +103,21 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires recvIos[0].msg.Propose?
     requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos) 
 
-    requires Chosen(c, ds', b', v')
+    requires Chosen(c, ds', b, v)
     requires OneValuePerBallot(c, ds')
     requires AcceptMsgImpliesProposeMsg(c, ds')
     requires ProposeMsgImpliesQuorumOfPromise(c, ds')
     requires PromiseVBImpliesAcceptMsg(c, ds')
     requires PromiseMsgBalLargerThanAcceptedItSees(c, ds')
-    requires LargerBallotsPromiseQrms(c, ds', b')
-    ensures LargerBallotAcceptMsgs(c, ds', b', v')
+    requires LargerBallotsPromiseQrms(c, ds', b)
+    ensures LargerBallotAcceptMsgs(c, ds', b, v)
 {
-    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs(c, ds, ds', actor, recvIos, sendIos, b', v');
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
 }
 
 
-lemma AgreementChosenInv_SomeChosen_AccAction_LargerBallotAcceptors(
-c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b':Ballot, v':Value) 
+lemma AgreementChosenInv_NewChosen_AccAction_LargerBallotAcceptors(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
     requires c.WF() && ds.WF(c)
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
@@ -127,15 +126,15 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires recvIos[0].msg.Propose?
     requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos) 
 
-    requires Chosen(c, ds', b', v')
+    requires Chosen(c, ds', b, v)
     requires Agreement_Chosen_Inv_Common(c, ds')
-    requires LargerBallotAcceptMsgs(c, ds', b', v')
-    ensures LargerBallotAcceptors(c, ds', b', v')
+    requires LargerBallotAcceptMsgs(c, ds', b, v)
+    ensures LargerBallotAcceptors(c, ds', b, v)
 {}
 
 
-lemma AgreementChosenInv_SomeChosen_AccAction_LargerBallotPromiseMsgs(
-c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b':Ballot, v':Value) 
+lemma AgreementChosenInv_NewChosen_AccAction_LargerBallotPromiseMsgs(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
     requires c.WF() && ds.WF(c)
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
@@ -144,35 +143,35 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires recvIos[0].msg.Propose?
     requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos) 
 
-    requires Chosen(c, ds', b', v')
+    requires Chosen(c, ds', b, v)
     requires Agreement_Chosen_Inv_Common(c, ds')
-    requires LargerBallotAcceptMsgs(c, ds', b', v')
-    ensures LargerBallotPromiseMsgs(c, ds', b', v')
+    requires LargerBallotAcceptMsgs(c, ds', b, v)
+    ensures LargerBallotPromiseMsgs(c, ds', b, v)
 {}
 
 
-lemma AgreementChosenInv_SomeChosen_AccAction_LargerBallotProposeMsgs(
-c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b':Ballot, v':Value) 
+lemma AgreementChosenInv_NewChosen_AccAction_LargerBallotProposeMsgs(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
     requires c.WF() && ds.WF(c)
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
 
-    requires Chosen(c, ds', b', v')
+    requires Chosen(c, ds', b, v)
     requires ProposeMsgImpliesQuorumOfPromise(c, ds')
     requires AcceptMsgImpliesProposeMsg(c, ds')
     requires OneValuePerBallot_ProposeMsg(c, ds')
-    requires LargerBallotsPromiseQrms(c, ds', b')
-    requires LargerBallotPromiseMsgs(c, ds', b', v')
-    ensures LargerBallotProposeMsgs(c, ds', b', v')
+    requires LargerBallotsPromiseQrms(c, ds', b)
+    requires LargerBallotPromiseMsgs(c, ds', b, v)
+    ensures LargerBallotProposeMsgs(c, ds', b, v)
 {
-    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b', v');
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
 }
 
 
-lemma AgreementChosenInv_SomeChosen_AccAction_LargerBallotPhase2LeadersV(
-c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b':Ballot, v':Value) 
+lemma AgreementChosenInv_NewChosen_AccAction_LargerBallotPhase2LeadersV(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
     requires c.WF() && ds.WF(c)
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
@@ -181,93 +180,19 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires recvIos[0].msg.Propose?
     requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
 
-    requires Chosen(c, ds', b', v')
+    requires Chosen(c, ds', b, v)
     requires Agreement_Chosen_Inv_Common(c, ds')
-    requires LargerBallotsPromiseQrms(c, ds', b')
-    requires LargerBallotPromiseMsgs(c, ds', b', v')
-    ensures LargerBallotPhase2LeadersV(c, ds', b', v')
+    requires LargerBallotsPromiseQrms(c, ds', b)
+    requires LargerBallotPromiseMsgs(c, ds', b, v)
+    ensures LargerBallotPhase2LeadersV(c, ds', b, v)
 {
-    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b', v');
-}
-
-
-
-lemma AgreementChosenInv_SomeChosen_OldValueChosen(
-c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
-    requires Agreement_Chosen_Inv(c, ds)
-    requires ds'.WF(c) && Trivialities(c, ds')
-    requires Next(c, ds, ds')
-    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires c.ValidAccId(actor)
-    requires Chosen(c, ds, b, v) 
-    ensures forall b', v' | Chosen(c, ds', b', v') :: v' == v
-{
-    forall b', v' | Chosen(c, ds', b', v') 
-    ensures v' == v
-    {
-        if BalLtEq(b, b') {
-            if Chosen(c, ds, b', v') {
-                assert v' == v;
-            } else {
-                /* This must be an accept step that lead to (b', v') being chosen. There
-                * is at least one Accept(b', v') in ds. This msg has v' == v by LargerBallotAcceptMsgs
-                */
-                
-                var qrm' :| QuorumOfAcceptMsgs(c, ds', qrm', b') && AccPacketsHaveValueV(qrm', v');
-                lemma_NewChosenImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, b', v');
-                var new_pkt := sendIos[0];
-                assert new_pkt.msg.val == v';
-                
-                // Prove new_pkt must be in qrm'
-                if new_pkt !in qrm' {
-                    lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
-                    forall p | p in qrm' 
-                    ensures p in ds.network.sentPackets
-                    {
-                        lemma_SingleElemList3(sendIos, new_pkt, p);
-                    }
-                    assert Chosen(c, ds, b', v');
-                    assert false;
-                }
-
-                assert |qrm'| >= 2;
-                lemma_Set_MultiElem(qrm', new_pkt);
-                var old_accpt :| old_accpt in qrm' && old_accpt != new_pkt;
-                assert old_accpt.msg.val == v';
-                assert old_accpt in ds.network.sentPackets;
-                assert isAcceptPkt(ds, old_accpt) && BalLtEq(b, old_accpt.msg.bal);
-                assert old_accpt.msg.val == v;
-                assert v' == v;
-            }
-        } else {
-            assert BalLt(b', b);
-            if Chosen(c, ds, b', v') {
-                assert v' == v;
-            } else {
-
-            }
-            // TODO
-            assume false;
-        }
-    }
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b, v);
 }
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+//////////////////////////////////////////////////////////////////////////////////////////
 
 lemma AgreementChosenInv_SomeChosen_LdrAction(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>)
@@ -525,6 +450,67 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
         }
     }
 }
+
+
+// lemma AgreementChosenInv_SomeChosen_OldValueChosen(
+// c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
+//     requires Agreement_Chosen_Inv(c, ds)
+//     requires ds'.WF(c) && Trivialities(c, ds')
+//     requires Next(c, ds, ds')
+//     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+//     requires c.ValidAccId(actor)
+//     requires Chosen(c, ds, b, v) 
+//     ensures forall b', v' | Chosen(c, ds', b', v') :: v' == v
+// {
+//     forall b', v' | Chosen(c, ds', b', v') 
+//     ensures v' == v
+//     {
+//         if BalLtEq(b, b') {
+//             if Chosen(c, ds, b', v') {
+//                 assert v' == v;
+//             } else {
+//                 /* This must be an accept step that lead to (b', v') being chosen. There
+//                 * is at least one Accept(b', v') in ds. This msg has v' == v by LargerBallotAcceptMsgs
+//                 */
+                
+//                 var qrm' :| QuorumOfAcceptMsgs(c, ds', qrm', b') && AccPacketsHaveValueV(qrm', v');
+//                 lemma_NewChosenImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, b, v);
+//                 var new_pkt := sendIos[0];
+//                 assert new_pkt.msg.val == v';
+                
+//                 // Prove new_pkt must be in qrm'
+//                 if new_pkt !in qrm' {
+//                     lemma_NewPacketsComeFromSendIos(c, ds, ds', actor, recvIos, sendIos);
+//                     forall p | p in qrm' 
+//                     ensures p in ds.network.sentPackets
+//                     {
+//                         lemma_SingleElemList3(sendIos, new_pkt, p);
+//                     }
+//                     assert Chosen(c, ds, b', v');
+//                     assert false;
+//                 }
+
+//                 assert |qrm'| >= 2;
+//                 lemma_Set_MultiElem(qrm', new_pkt);
+//                 var old_accpt :| old_accpt in qrm' && old_accpt != new_pkt;
+//                 assert old_accpt.msg.val == v';
+//                 assert old_accpt in ds.network.sentPackets;
+//                 assert isAcceptPkt(ds, old_accpt) && BalLtEq(b, old_accpt.msg.bal);
+//                 assert old_accpt.msg.val == v;
+//                 assert v' == v;
+//             }
+//         } else {
+//             assert BalLt(b', b);
+//             if Chosen(c, ds, b', v') {
+//                 assert v' == v;
+//             } else {
+
+//             }
+//             // TODO
+//             assume false;
+//         }
+//     }
+// }
 
 
 }

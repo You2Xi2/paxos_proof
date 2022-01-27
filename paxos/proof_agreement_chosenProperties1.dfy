@@ -388,16 +388,16 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 
 lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_P2LeaderV(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
-    requires Agreement_Chosen_Inv(c, ds)
+    requires c.WF() && ds.WF(c)
     requires ds'.WF(c) && Trivialities(c, ds')
-    requires Agreement_Chosen_Inv_Common(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
     requires recvIos[0].msg.Propose?
     requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
-    requires !SomeValueChosen(c, ds)
+    
     requires Chosen(c, ds', b, v)
+    requires Agreement_Chosen_Inv_Common(c, ds')
     requires LargerBallotsPromiseQrms(c, ds', b)
     requires LargerBallotPromiseMsgs(c, ds', b, v)
     ensures LargerBallotPhase2LeadersV(c, ds', b, v)

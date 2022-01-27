@@ -5,6 +5,7 @@ include "synod.dfy"
 include "proof_helper.dfy"
 include "proof_axioms.dfy"
 include "proof_agreement_invariants.dfy"
+include "proof_agreement_chosenProperties1.dfy"
 
 module Proof_Agreement_ChosenProperties_2 {
 import opened Network
@@ -14,6 +15,7 @@ import opened Synod
 import opened Proof_Helper
 import opened Proof_Axioms
 import opened Proof_Agreement_Invs
+import opened Proof_Agreement_ChosenProperties_1
 
 
 
@@ -52,19 +54,25 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     forall b', v' | Chosen(c, ds', b', v') 
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b', v')
     {
-        // var b, v :| Chosen(c, ds, b, v);
-        assume LargerBallotsPromiseQrms(c, ds', b');    // TODO
-        assume LargerBallotAcceptMsgs(c, ds', b', v');  // TODO
+        if Chosen(c, ds, b', v') {
+            assume false;
+        } else {
+            // var b, v :| Chosen(c, ds, b, v);
+            lemma_NewChosenImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, b', v');
+            assume LargerBallotsPromiseQrms(c, ds', b');    // TODO
+            assume LargerBallotAcceptMsgs(c, ds', b', v');  // TODO
 
-        AgreementChosenInv_SomeChosen_AccAction_LargerBallotAcceptors(c, ds, ds', actor, recvIos, sendIos, b', v');
-        AgreementChosenInv_SomeChosen_AccAction_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b', v');
-        AgreementChosenInv_SomeChosen_AccAction_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b', v');
-        assert LargerBallotAcceptors(c, ds', b', v');
-        assert LargerBallotPromiseMsgs(c, ds', b', v');
-        assert LargerBallotProposeMsgs(c, ds', b', v');
+            AgreementChosenInv_SomeChosen_AccAction_LargerBallotAcceptors(c, ds, ds', actor, recvIos, sendIos, b', v');
+            AgreementChosenInv_SomeChosen_AccAction_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b', v');
+            AgreementChosenInv_SomeChosen_AccAction_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b', v');
+            AgreementChosenInv_SomeChosen_AccAction_LargerBallotPhase2LeadersV(c, ds, ds', actor, recvIos, sendIos, b', v');
+            assert LargerBallotAcceptors(c, ds', b', v');
+            assert LargerBallotPromiseMsgs(c, ds', b', v');
+            assert LargerBallotProposeMsgs(c, ds', b', v');
+            assert LargerBallotPhase2LeadersV(c, ds', b', v');
 
-        assume LargerBallotPhase2LeadersV(c, ds', b', v');
-        assume SameBallotLeaderNotInPhase1(c, ds', b');
+            assume SameBallotLeaderNotInPhase1(c, ds', b');
+        }
     }
 }
 
@@ -131,6 +139,25 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
             assert PromisePktWithHighestBallot(prom_qrm).msg.vb.v == v';     // because LargerBallotPromiseMsgs
         }
     }
+}
+
+lemma AgreementChosenInv_SomeChosen_AccAction_LargerBallotPhase2LeadersV(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b':Ballot, v':Value) 
+    requires c.WF() && ds.WF(c)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires recvIos[0].msg.Propose?
+    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
+
+    requires Chosen(c, ds', b', v')
+    requires Agreement_Chosen_Inv_Common(c, ds')
+    requires LargerBallotsPromiseQrms(c, ds', b')
+    requires LargerBallotPromiseMsgs(c, ds', b', v')
+    ensures LargerBallotPhase2LeadersV(c, ds', b', v')
+{
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b', v');
 }
 
 

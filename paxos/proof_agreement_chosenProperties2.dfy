@@ -57,6 +57,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
         assume LargerBallotAcceptMsgs(c, ds', b', v');  // TODO
 
         AgreementChosenInv_SomeChosen_AccAction_LargerBallotAcceptors(c, ds, ds', actor, recvIos, sendIos, b', v');
+        AgreementChosenInv_SomeChosen_AccAction_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b', v');
         assert LargerBallotAcceptors(c, ds', b', v');
         assert LargerBallotPromiseMsgs(c, ds', b', v');
 
@@ -82,6 +83,25 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires LargerBallotAcceptMsgs(c, ds', b', v')
     ensures LargerBallotAcceptors(c, ds', b', v')
 {}
+
+
+lemma AgreementChosenInv_SomeChosen_AccAction_LargerBallotPromiseMsgs(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b':Ballot, v':Value) 
+    requires c.WF() && ds.WF(c)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+
+    requires Chosen(c, ds', b', v')
+    requires Agreement_Chosen_Inv_Common(c, ds')
+    requires LargerBallotsPromiseQrms(c, ds', b')
+    requires LargerBallotAcceptMsgs(c, ds', b', v')
+    requires LargerBallotAcceptors(c, ds', b', v');
+    ensures LargerBallotPromiseMsgs(c, ds', b', v')
+{}
+
+
 
 
 

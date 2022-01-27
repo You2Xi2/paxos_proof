@@ -355,14 +355,16 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 
 lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotProposeMsgs(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
-    requires Agreement_Chosen_Inv(c, ds)
+    requires c.WF() && ds.WF(c)
     requires ds'.WF(c) && Trivialities(c, ds')
-    requires Agreement_Chosen_Inv_Common(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
-    requires !SomeValueChosen(c, ds)
+
     requires Chosen(c, ds', b, v)
+    requires ProposeMsgImpliesQuorumOfPromise(c, ds')
+    requires AcceptMsgImpliesProposeMsg(c, ds')
+    requires OneValuePerBallot_ProposeMsg(c, ds')
     requires LargerBallotPromiseMsgs(c, ds', b, v)
     requires LargerBallotsPromiseQrms(c, ds', b)
     ensures LargerBallotProposeMsgs(c, ds', b, v)

@@ -123,22 +123,7 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires LargerBallotPromiseMsgs(c, ds', b', v')
     ensures LargerBallotProposeMsgs(c, ds', b', v')
 {
-    forall p | isProposePkt(ds', p) && BalLtEq(b', p.msg.bal)
-    ensures p.msg.val == v'
-    {
-        var b, v := p.msg.bal, p.msg.val;
-        if b == b' {
-            assert v' == v;     // by OneValuePerBallot_ProposeMsg
-        } else {
-            var prom_qrm :| && QuorumOfPromiseMsgs(c, ds', prom_qrm, b)
-                            && (|| PromisePktWithHighestBallot(prom_qrm).msg.vb.v == v
-                                || PromisePktWithHighestBallot(prom_qrm).msg.vb.v == Nil);
-            var prom := PromisePktWithHighestBallot(prom_qrm);
-            var prom_smaller:Packet :| prom_smaller in prom_qrm && BalLtEq(b', prom_smaller.msg.vb.b);  // because Quorum must have seen b (LargerBallotsPromiseQrms)
-            lemma_BalLtEqTransitivity(b', prom_smaller.msg.vb.b, prom.msg.vb.b);
-            assert PromisePktWithHighestBallot(prom_qrm).msg.vb.v == v';     // because LargerBallotPromiseMsgs
-        }
-    }
+    AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b', v');
 }
 
 lemma AgreementChosenInv_SomeChosen_AccAction_LargerBallotPhase2LeadersV(
@@ -159,8 +144,6 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 {
     AgreementChosenInv_NoneChosen_AccAction_NewChosenV_P2LeaderV(c, ds, ds', actor, recvIos, sendIos, b', v');
 }
-
-
 
 
 

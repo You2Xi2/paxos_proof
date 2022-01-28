@@ -49,13 +49,11 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
-    requires !SomeValueChosen(c, ds)
     ensures Agreement_Chosen_Inv_ChosenProperties(c, ds')
 {
     forall b, v | Chosen(c, ds', b, v) 
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)
     {
-        lemma_NewChosenImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, b, v);
         AgreementChosenInv_NoneChosen_AccAction_NewChosenV(c, ds, ds', actor, recvIos, sendIos, b, v);
     }
 }
@@ -69,9 +67,6 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
     requires c.ValidAccId(actor)
-    requires recvIos[0].msg.Propose?
-    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
-    requires !SomeValueChosen(c, ds)
     requires Chosen(c, ds', b, v)
     requires OneValuePerBallot(c, ds');
     ensures Agreement_Chosen_Inv_SomeValChosen(c, ds', b, v)

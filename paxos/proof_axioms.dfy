@@ -11,17 +11,21 @@ import opened Types
 import opened Synod
 import opened Proof_Agreement_Invs
 
-lemma {:axiom} axiom_BallotInduction1(c:Constants, ds:DistrSys, accpt:Packet, b:Ballot, v:Value) 
-    requires c.WF() && ds.WF(c)
-    requires isAcceptPkt(ds, accpt)
-    requires BalLtEq(b, accpt.msg.bal)
-    requires accpt.msg.bal == b ==>  accpt.msg.val == v
-    requires BalLt(b, accpt.msg.bal) ==> 
-        (exists accpt2:Packet :: 
-            && isAcceptPkt(ds, accpt2) 
-            && BalLtEq(b, accpt2.msg.bal) && BalLt(accpt2.msg.bal, accpt.msg.bal)
-            && accpt2.msg.val == accpt.msg.val)
-    ensures accpt.msg.val == v
+
+lemma {:axiom} axiom_FiniteBallots(b1:Ballot, b2:Ballot) returns (s:seq<Ballot>)
+    requires BalLtEq(b1, b2)
+    ensures |s| > 0
+    ensures b1 == s[0]
+    ensures b2 == s[|s|-1]
+    ensures TotalOrderBal(s)
+
+predicate TotalOrderBal(s:seq<Ballot>) 
+    requires |s| > 0
+{
+    && (forall i, j | 0 <= i < j < |s| :: BalLt(s[i], s[j]))
+    && (forall b' | BalLtEq(s[0], b') && BalLtEq(b', s[|s|-1]) :: b' in s)
+    && seqIsUnique(s)
+}
 
 
 lemma {:axiom} axiom_Set_Cover<T>(S1:set<T>, S2:set<T>, U:set<T>)

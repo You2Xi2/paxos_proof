@@ -176,33 +176,39 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     forall accpt | isAcceptPkt(ds', accpt) && BalLtEq(b, accpt.msg.bal)
     ensures accpt.msg.val == v
     {
+        var s := axiom_FiniteBallots(b, accpt.msg.bal);
         AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs_helper(c, ds, ds', 
-            actor, recvIos, sendIos, b, v, accpt, accpt.msg.bal, accpt.msg.val);
+            actor, recvIos, sendIos, b, v, accpt, accpt.msg.val, s, |s|-1);
     }
 }
 
 
 lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs_helper(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value,
-accpt:Packet, b1:Ballot, v':Value)
-    decreases b1
-    requires Agreement_Chosen_Inv(c, ds)
+accpt:Packet, v':Value, s:seq<Ballot>, i:int)
+    decreases i
+    requires c.WF() && ds.WF(c)
     requires ds'.WF(c) && Trivialities(c, ds')
-    // Picking individual items from Agreement_Chosen_Inv_Common, faster verification
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
+    requires c.ValidAccId(actor)
+    requires Chosen(c, ds', b, v)
+    requires isAcceptPkt(ds', accpt) && BalLtEq(b, accpt.msg.bal)
+
+    requires |s| > 0
+    requires 0 <= i < |s|
+    requires s[0] == b
+    requires s[i] == accpt.msg.bal
+    requires v' == accpt.msg.val
+    requires TotalOrderBal(s)
+    
     requires OneValuePerBallot(c, ds')
     requires AcceptMsgImpliesProposeMsg(c, ds')
     requires ProposeMsgImpliesQuorumOfPromise(c, ds')
     requires PromiseVBImpliesAcceptMsg(c, ds')
     requires PromiseMsgBalLargerThanAcceptedItSees(c, ds')
-
-    requires Next(c, ds, ds')
-    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires c.ValidAccId(actor)
-    requires Chosen(c, ds', b, v)
     requires LargerBallotsPromiseQrms(c, ds', b)
-    requires isAcceptPkt(ds', accpt) && BalLtEq(b, accpt.msg.bal)
-    requires b1 == accpt.msg.bal
-    requires v' == accpt.msg.val
+
     ensures accpt.msg.val == v
 {
     /* Consider accpt Accept(b1, v') message, b1 >b. By AcceptMsgImpliesProposeMsg, there is a Propose(b1, v') in the network.
@@ -218,10 +224,8 @@ accpt:Packet, b1:Ballot, v':Value)
     */
     var b1, v' := accpt.msg.bal, accpt.msg.val;
     if b1 == b {
-        var chosen_qrm_member :|    && isAcceptPkt(ds', chosen_qrm_member)
-                                    && chosen_qrm_member.msg.bal == b
-                                    && chosen_qrm_member.msg.val == v;
-        assert chosen_qrm_member.msg.val == accpt.msg.val;  // by OneValuePerBallot_AcceptMsg
+        assert i == 0;
+        assert v' == v;
     } else {
         var prop1 :| isProposePkt(ds', prop1) && prop1.msg == Propose(b1, v');
         var qrm1 :| QuorumOfPromiseMsgs(c, ds', qrm1, b1)
@@ -242,13 +246,28 @@ accpt:Packet, b1:Ballot, v':Value)
         lemma_BalLtEqTransitivity(b, b_witness.msg.vb.b, b2);
         assert BalLtEq(b, b2);
         assert BalLt(b2, b1);       // by PromiseMsgBalLargerThanAcceptedItSees
+        lemma_BalLtEqTransitivity(b2, b1, s[|s|-1]);
+        assert b2 in s;
+        var h := seqElemIndex(s, b2);
+        
+        // Needs dumb proof that h < i, which is implied by BalLt(b2, b1)
+        if h >= i {
+            if h == i {
+                assert b2 == b1;
+                assert false;
+            } else {
+                assert BalLt(b1, b2);
+                lemma_BalLtSynonyms(b1, b2);
+                assert false;
+            }
+        }        
 
         // Fetch Accept packet corresponding to balval seen by prom1
         var accpt2 :|   && isAcceptPkt(ds', accpt2)      // by PromiseVBImpliesAcceptMsg
                         && accpt2.msg == Accept(b2, v');
-        // AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs_helper(c, ds, ds', 
-        //     actor, recvIos, sendIos, b, v, accpt2, b2, v');
-        axiom_BallotInduction1(c, ds', accpt, b, v);
+
+        AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptMsgs_helper(c, ds, ds', 
+            actor, recvIos, sendIos, b, v, accpt2, accpt2.msg.val, s, h);
     }
 }
 

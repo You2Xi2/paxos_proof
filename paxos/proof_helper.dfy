@@ -18,41 +18,6 @@ import opened Proof_Agreement_Invs
 *                                 Single State Helpers                                   *
 *****************************************************************************************/
 
-// lemma Lemma_DecidedImpliesQuorumOfAccepts(c:Constants, ds:DistrSys, idx:int) 
-//     requires c.WF() && ds.WF(c)
-//     requires c.ValidLdrIdx(idx) && LeaderHasDecided(c, ds, idx);
-//     requires LdrAcceptsSetCorrespondToAcceptMsg(c, ds)
-//     requires LeaderHasQuorumOfAccepts(c, ds, idx)
-//     ensures exists qrm :: QuorumOfAcceptMsgs(c, ds, qrm, ds.leaders[idx].ballot)
-// {
-//     var l, b, v := ds.leaders[idx], ds.leaders[idx].ballot, ds.leaders[idx].val;
-//     var qrm:set<Packet> := {};
-//     var accepts := l.accepts;
-//     var sentPackets := ds.network.sentPackets;
-//     var i := 0;
-//     while i < c.f + 1 
-//         decreases c.f+1 - i
-//         invariant |accepts| == c.f+1 - i
-//         invariant |qrm| == i
-//         invariant UniqueSources(qrm)
-//         invariant forall s | s in accepts :: 
-//             (forall p | p in qrm :: p.src != s)
-//         invariant forall s | s in accepts :: s in l.accepts
-//         invariant forall p | p in qrm :: p.msg.Accept?
-//         invariant forall p | p in qrm :: p.msg.bal == b
-//         invariant forall p | p in qrm :: p in sentPackets;
-//         invariant forall p | p in qrm :: p.dst == Id(Ldr, idx);
-//     {
-//         var s :| s in accepts;
-//         var pkt := Packet(s, Id(Ldr, idx), Accept(b, v));
-//         qrm := qrm + {pkt};
-//         accepts := accepts - {s};
-//         i := i + 1;
-//     }
-//     assert QuorumOfAcceptMsgs(c, ds, qrm, b);
-// }
-
-
 /* If a Promise qrm has seen (b, v), and all larger witnesses has value v, then 
 * PromisePktWithHighestBallot(qrm) has value v */
 lemma lemma_QrmSeenBAndAllLargerBalsHaveSameV(c:Constants, ds:DistrSys, qrm:set<Packet>, b':Ballot, b:Ballot, v:Value)
@@ -505,4 +470,12 @@ function {:opaque} setFromSeq(a:seq<Id>) : (res:set<Id>)
     else 
         {a[0]} + setFromSeq(a[1..])
 }
+
+
+function seqElemIndex<T>(a:seq<T>, e:T) : (i:int) 
+    requires |a| > 0
+    requires e in a
+    ensures 0 <= i < |a|
+    ensures a[i] == e
+
 }

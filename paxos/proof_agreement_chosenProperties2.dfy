@@ -56,12 +56,9 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     {
         if Chosen(c, ds, b, v) {
 
-            
-            assume LargerBallotsPromiseQrms(c, ds', b);
-
-
-
+            AgreementChosenInv_OldChosen_AccAction_LargerBallotsPromiseQrms(c, ds, ds', actor, recvIos, sendIos, b, v);
             AgreementChosenInv_NewChosen_AccAction_LargerBallotAcceptMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
+            assert LargerBallotsPromiseQrms(c, ds', b);
             assert LargerBallotAcceptMsgs(c, ds', b, v);  
 
             assume LargerBallotAcceptors(c, ds', b, v);
@@ -80,6 +77,85 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
         }
     }
 }
+
+
+lemma AgreementChosenInv_OldChosen_AccAction_LargerBallotsPromiseQrms(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value) 
+    requires c.WF() && ds.WF(c)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos) 
+    requires Chosen(c, ds, b, v)
+    requires Chosen(c, ds', b, v)
+
+    requires Agreement_Chosen_Inv_Common(c, ds')
+    ensures LargerBallotsPromiseQrms(c, ds', b)
+{
+    forall b' | BalLt(b, b') 
+    ensures LargerBalQuorumHasSeenB(c, ds', b, b')
+    {
+        forall qrm':set<Packet> | QuorumOfPromiseMsgs(c, ds', qrm', b') 
+        ensures QuorumHasSeenB(c, qrm', b){
+            AgreementChosenInv_OldChosen_AccAction_LargerBallotsPromiseQrms_helper(c, ds, ds', actor, recvIos, sendIos, b, v, b', qrm');
+        }
+    }
+}
+
+
+lemma AgreementChosenInv_OldChosen_AccAction_LargerBallotsPromiseQrms_helper(
+c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value, b':Ballot, qrm':set<Packet>) 
+    requires c.WF() && ds.WF(c)
+    requires ds'.WF(c) && Trivialities(c, ds')
+    requires Next(c, ds, ds')
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos) 
+    requires Chosen(c, ds, b, v)
+    requires Chosen(c, ds', b, v)
+    requires BalLt(b, b') 
+    
+    requires PromisedImpliesNoMoreAccepts(c, ds')
+    requires QuorumOfPromiseMsgs(c, ds', qrm', b')
+    ensures QuorumHasSeenB(c, qrm', b)
+{
+    /* Proof: Suppose otherwise. Then qrm' is in ds, and every Prom in qrm' has promised
+    * b', and saw < b. By PromisedImpliesNoMoreAccepts, this means that no Accept(b) messages
+    * from any acceptor in qrm', with f+1 acceptors.
+    * But since (b, v) is chosen in ds', there are f+1 Accepts. C!
+    */
+    if !QuorumHasSeenB(c, qrm', b) {
+
+        // Get set of acceptors that promised b' (and not seen b) in ds'
+        var accs_that_promised := extractPacketSources(qrm');
+        assert |accs_that_promised| >= c.f + 1;
+
+        // Get set of acceptors that voted to choose (b, v) in ds'
+        var qrm :| QuorumOfAcceptMsgs(c, ds', qrm, b) && AccPacketsHaveValueV(qrm, v);
+        var accs_that_accepted := extractPacketSources(qrm);
+        assert |accs_that_accepted| >= c.f+1;
+
+        // Show that accs_that_promised && accs_that_accepted should be disjoint;
+        // use PromisedImpliesNoMoreAccepts
+        forall id | id in accs_that_promised 
+        ensures id !in accs_that_accepted
+        {
+            var prom :| prom in qrm' && prom.src == id;
+            forall accp:Packet | accp in qrm 
+            ensures accp.src != id
+            {
+                if accp.src == id {      
+                    assert !BalLtEq(accp.msg.bal, prom.msg.vb.b);
+                    lemma_BalLtSynonyms(b, b');
+                    assert !BalLtEq(prom.msg.bal, accp.msg.bal);
+                    assert false;
+                }
+            }
+        }
+        
+        // But they can't be disjoint
+        var src := axiom_Set_Intersection(accs_that_promised, accs_that_accepted, setFromSeq(c.acc_ids));
+        assert false;
+    }
+}
+
 
 
 lemma AgreementChosenInv_NewChosen_AccAction_LargerBallotsPromiseQrms(

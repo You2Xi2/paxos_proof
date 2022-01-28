@@ -87,15 +87,13 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 
 lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotsPromiseQrms(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
-    requires Agreement_Chosen_Inv(c, ds)
+    requires c.WF() && ds.WF(c)
     requires ds'.WF(c) && Trivialities(c, ds')
-    requires Agreement_Chosen_Inv_Common(c, ds')
     requires Next(c, ds, ds')
-    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires c.ValidAccId(actor)
-    requires recvIos[0].msg.Propose?
-    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos) 
     requires Chosen(c, ds', b, v)
+    
+    requires PromisedImpliesNoMoreAccepts(c, ds')
     ensures LargerBallotsPromiseQrms(c, ds', b)
 {
     forall b' | BalLt(b, b') 
@@ -110,59 +108,40 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
 
 lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotsPromiseQrms_helper(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, b':Ballot, qrm':set<Packet>, v:Value)
-    requires Agreement_Chosen_Inv(c, ds)
+    requires c.WF() && ds.WF(c)
     requires ds'.WF(c) && Trivialities(c, ds')
-    // Picking individual items from Agreement_Chosen_Inv_Common, faster verification
-    requires OneValuePerBallot(c, ds')
-    requires PromiseMsgImpliesPromised(c, ds')
-    requires PromisedImpliesNoMoreAccepts(c, ds')
-    requires AccPromisedBallotLargerThanAccepted(c, ds')
-    requires AcceptMsgImpliesAccepted(c, ds')
-
     requires Next(c, ds, ds')
-    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires c.ValidAccId(actor)
-    requires recvIos[0].msg.Propose?
-    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos)   
+    requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos) 
     requires Chosen(c, ds', b, v)
     requires BalLt(b, b') 
+    
+    requires PromisedImpliesNoMoreAccepts(c, ds')
     requires QuorumOfPromiseMsgs(c, ds', qrm', b')
     ensures QuorumHasSeenB(c, qrm', b)
 {
     /* Proof: Suppose otherwise. Then qrm' is in ds, and every Prom in qrm' has promised
     * b', and saw < b. By PromisedImpliesNoMoreAccepts, this means that no Accept(b) messages
-    * from any acceptor in qrm'.
-    * Call the set of acceptors that chose (b, v) in ds' as qrm. Then qrm and qrm' must be disjoint, 
-    * and their union is the set of all acceptors, and qrm is size f. 
-    * Now consider the actor taking a step: 
-    *   1. If actor is in qrm', it can't accept (b, v). Hence (b,v) not chosen in ds'. C!
-    *   2. If actor is in qrm, |qrm| remains f in ds'. C!
+    * from any acceptor in qrm', with f+1 acceptors.
+    * But since (b, v) is chosen in ds', there are f+1 Accepts. C!
     */
     if !QuorumHasSeenB(c, qrm', b) {
-        forall prom | prom in qrm' ensures BalLt(prom.msg.vb.b, b) {}
-        lemma_NoPromiseSentInNonPromiseStep(c, ds, ds', actor, recvIos, sendIos);
-        assert QuorumOfPromiseMsgs(c, ds, qrm', b');
-        
-        // Get set of acceptors that promised b' (and not seen b) in ds
+
+        // Get set of acceptors that promised b' (and not seen b) in ds'
         var accs_that_promised := extractPacketSources(qrm');
         assert |accs_that_promised| >= c.f + 1;
 
-        // Get set of acceptors that voted to choose (b, v) in ds
+        // Get set of acceptors that voted to choose (b, v) in ds'
         var qrm :| QuorumOfAcceptMsgs(c, ds', qrm, b) && AccPacketsHaveValueV(qrm, v);
-        var new_accept_pkt := lemma_NewChosenImpliesOneNewAcceptPacket(c, ds, ds', actor, recvIos, sendIos, b, v);
-        var pre_qrm := qrm - {new_accept_pkt};   // set without the latest Accept from ds->ds' actor.
-        assert SetOfAcceptMsgs(c, ds, pre_qrm, b);
-        lemma_Set_MinusElem(qrm, new_accept_pkt, |qrm|);
-        var accs_that_accepted := extractPacketSources(pre_qrm);
-        assert |accs_that_accepted| >= c.f;
+        var accs_that_accepted := extractPacketSources(qrm);
+        assert |accs_that_accepted| >= c.f+1;
 
-        // Show that accs_that_promised && accs_that_accepted are disjoint;
+        // Show that accs_that_promised && accs_that_accepted should be disjoint;
         // use PromisedImpliesNoMoreAccepts
         forall id | id in accs_that_promised 
         ensures id !in accs_that_accepted
         {
             var prom :| prom in qrm' && prom.src == id;
-            forall accp | accp in qrm 
+            forall accp:Packet | accp in qrm 
             ensures accp.src != id
             {
                 if accp.src == id {      
@@ -173,23 +152,10 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
                 }
             }
         }
-        axiom_Set_DisjointSets(accs_that_promised, accs_that_accepted);
-        // Consider the current actor taking a step
-        lemma_IdSetCover(c, ds, accs_that_promised, accs_that_accepted, actor);
-        if actor in accs_that_promised {
-            assert BalLtEq(b', ds.acceptors[actor.idx].promised);   // by PromiseMsgImpliesPromised
-            lemma_BalLtTransitivity1(b, b', ds.acceptors[actor.idx].promised);
-            lemma_NewChosenImpliesIncomingProposalBV(c, ds, ds', actor, recvIos, sendIos, b, v);
-            assert !AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos); 
-            assert false;
-        } else {
-            assert actor in accs_that_accepted;
-            var p :| p in pre_qrm && p.src == actor && isAcceptPkt(ds, p) && p.msg.bal == b;
-            lemma_NewChosenImpliesIncomingProposalBV(c, ds, ds', actor, recvIos, sendIos, b, v);
-            assert sendIos[0] == p;
-            assert ds'.network.sentPackets == ds.network.sentPackets;
-            assert false;       // violates lemma_NewChosenImpliesOneNewAcceptPacket
-        }
+        
+        // But they can't be disjoint
+        var src := axiom_Set_Intersection(accs_that_promised, accs_that_accepted, setFromSeq(c.acc_ids));
+        assert false;
     }
 }
 

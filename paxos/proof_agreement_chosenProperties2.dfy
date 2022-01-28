@@ -59,15 +59,16 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
             AgreementChosenInv_NewChosen_AccAction_LargerBallotsPromiseQrms(c, ds, ds', actor, recvIos, sendIos, b, v);
             AgreementChosenInv_NewChosen_AccAction_LargerBallotAcceptMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
             AgreementChosenInv_NewChosen_AccAction_LargerBallotAcceptors(c, ds, ds', actor, recvIos, sendIos, b, v);
-             AgreementChosenInv_NewChosen_AccAction_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
+            AgreementChosenInv_NewChosen_AccAction_LargerBallotPromiseMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
+            AgreementChosenInv_NewChosen_AccAction_LargerBallotProposeMsgs(c, ds, ds', actor, recvIos, sendIos, b, v);
+            AgreementChosenInv_NewChosen_AccAction_LargerBallotPhase2LeadersV(c, ds, ds', actor, recvIos, sendIos, b, v);
             assert LargerBallotsPromiseQrms(c, ds', b);
             assert LargerBallotAcceptMsgs(c, ds', b, v);  
             assert LargerBallotAcceptors(c, ds', b, v);
             assert LargerBallotPromiseMsgs(c, ds', b, v);
-            
-            assume LargerBallotProposeMsgs(c, ds', b, v);
-            assume LargerBallotPhase2LeadersV(c, ds', b, v);
-            assume SameBallotLeaderNotInPhase1(c, ds', b);
+            assert LargerBallotProposeMsgs(c, ds', b, v);
+            assert LargerBallotPhase2LeadersV(c, ds', b, v);
+            assert SameBallotLeaderNotInPhase1(c, ds', b);
         } else {
             lemma_NewChosenImpliesAcceptStep(c, ds, ds', actor, recvIos, sendIos, b, v);
             AgreementChosenInv_NewChosen_AccAction_LargerBallotsPromiseQrms(c, ds, ds', actor, recvIos, sendIos, b, v);
@@ -255,9 +256,6 @@ c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:s
     requires ds'.WF(c) && Trivialities(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires c.ValidAccId(actor)
-    requires recvIos[0].msg.Propose?
-    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
 
     requires Chosen(c, ds', b, v)
     requires Agreement_Chosen_Inv_Common(c, ds')

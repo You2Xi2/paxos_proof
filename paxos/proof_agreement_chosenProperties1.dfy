@@ -260,60 +260,30 @@ accpt:Packet, b1:Ballot, v':Value)
 
 lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotAcceptors(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
-    requires Agreement_Chosen_Inv(c, ds)
+    requires c.WF() && ds.WF(c)
     requires ds'.WF(c) && Trivialities(c, ds')
-    requires Agreement_Chosen_Inv_Common(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires c.ValidAccId(actor)
-    requires recvIos[0].msg.Propose?
-    requires AcceptorAccept(ds.acceptors[actor.idx], ds'.acceptors[actor.idx], recvIos[0], sendIos);   
-    requires !SomeValueChosen(c, ds)
+
     requires Chosen(c, ds', b, v)
-    requires LargerBallotsPromiseQrms(c, ds', b)
+    requires Agreement_Chosen_Inv_Common(c, ds')
     requires LargerBallotAcceptMsgs(c, ds', b, v)
     ensures LargerBallotAcceptors(c, ds', b, v)
-{
-    forall i' | c.ValidAccIdx(i') && BalLtEq(b, ds'.acceptors[i'].accepted.b)
-    ensures AcceptorHasValueV(c, ds', i', v) {
-        var b', v' :=  ds'.acceptors[i'].accepted.b, ds'.acceptors[i'].accepted.v;
-        if v' != v {
-            var accp :| && isAcceptPkt(ds', accp)   // by AcceptedImpliesAcceptMsg
-                        && accp.msg == Accept(b', v');
-            assert false;   // violtes LargerBallotAcceptMsgs
-        }
-    }
-}
-
+{}
 
 
 lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotPromiseMsgs(
 c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIos:seq<Packet>, sendIos:seq<Packet>, b:Ballot, v:Value)
-    requires Agreement_Chosen_Inv(c, ds)
+    requires c.WF() && ds.WF(c)
     requires ds'.WF(c) && Trivialities(c, ds')
-    requires Agreement_Chosen_Inv_Common(c, ds')
     requires Next(c, ds, ds')
     requires PaxosNextOneAgent(c, ds, ds', actor, recvIos, sendIos)
-    requires c.ValidAccId(actor)
-    requires !SomeValueChosen(c, ds)
+
     requires Chosen(c, ds', b, v)
+    requires Agreement_Chosen_Inv_Common(c, ds')
     requires LargerBallotAcceptMsgs(c, ds', b, v)
     ensures LargerBallotPromiseMsgs(c, ds', b, v)
-{
-    forall p | isPromisePkt(ds', p) && BalLtEq(b, p.msg.vb.b)
-    ensures p.msg.vb.v == v 
-    {
-        var b', v' := p.msg.vb.b, p.msg.vb.v;
-        var ap :|  && isAcceptPkt(ds', ap)
-                    && ap.src == p.src
-                    && ap.msg.bal == b'
-                    && ap.msg.val == v';
-        assert LargerBallotAcceptMsgs(c, ds', b, v);
-        if v' != v {
-            assert false;
-        }
-    }
-}
+{}
 
 
 lemma AgreementChosenInv_NoneChosen_AccAction_NewChosenV_LargerBallotProposeMsgs(

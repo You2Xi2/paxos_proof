@@ -2,3 +2,4 @@
 .vscode/
 scratch.dfy
 paxos/notes.md
+paxos/sloc-metrics/*.pdf

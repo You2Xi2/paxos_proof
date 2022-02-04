@@ -1,0 +1,80 @@
+#lang ivy1.7
+
+type state = {initial, prepared, committed, aborted}
+type rm 
+
+relation agree(X:rm)    # X agrees in the vote
+relation disagree(X:rm) # X disagrees in the vote
+relation commit(X:rm)   # TM orders X to commit
+relation abort(X:rm)    # TM orders X to abort
+
+function rm_state(X:rm) : state 
+individual tm_state : state
+
+after init {
+    # RM's and TM's are in initial state
+    rm_state(X) := initial;
+    tm_state := initial;
+
+    # No votes or decision sent
+    agree(X) := false;
+    commit(X) := false;
+    abort(X) := false
+}
+
+# RM x agrees to the transaction
+action rm_agree(x:rm) = {
+    require rm_state(x) = initial;
+    agree(x) := true;
+    rm_state(x) := prepared
+}
+
+# RM x disagrees to the transaction
+action rm_disagree(x:rm) = {
+    require rm_state(x) = initial;
+    rm_state(x) := prepared
+}
+
+# TM makes a decision
+action tm_decide = {
+    require tm_state = initial & rm_state(X) = prepared;
+    if some x:rm. ~agree(x) {
+        abort(X) := true;
+        tm_state := aborted
+    } else {
+        commit(X) := true;
+        tm_state := committed
+    }
+}
+
+# RM receives commit decision
+action rm_commit(x:rm) = {
+    require rm_state(x) = prepared & commit(x);
+    rm_state(x) := committed
+}
+
+# RM receives abort decision
+action rm_abort(x:rm) = {
+    require rm_state(x) = prepared & abort(x);
+    rm_state(x) := aborted
+}
+
+export rm_agree
+export rm_disagree
+export tm_decide
+export rm_commit
+export rm_abort
+
+
+
+# Safety 1: All processes reach the same decision
+invariant ~(X ~= Y & rm_state(X) = aborted & rm_state(Y) = committed)  
+
+# Safety 2: Commit decision can only be reached if all RM vote agree
+invariant ~(rm_state(X) = committed & rm_state(Y) ~= initial & ~agree(Y) )
+
+# Safety 3: If all RM vote agree, then decision must be commit
+invariant (forall X. agree(X) | rm_state(X) = initial) -> (forall X. rm_state(X) ~= aborted)
+
+
+attribute method = bmc[15]

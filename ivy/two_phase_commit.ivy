@@ -105,4 +105,11 @@ invariant tm_state ~= prepared
 invariant tm_state = committed -> forall X. agree(X)
 invariant tm_state = aborted -> (exists X. ~agree(X) & rm_state(X) ~= initial)
 
-# attribute method = bmc[15]
+
+
+# Finite-instance MC
+# interpret rm -> {0..10}
+# attribute method = mc
+
+# Bounded MC
+# attribute method = bmc[10]

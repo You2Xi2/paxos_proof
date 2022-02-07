@@ -4,7 +4,6 @@ type state = {initial, prepared, committed, aborted}
 type rm 
 
 relation agree(X:rm)    # X agrees in the vote
-relation disagree(X:rm) # X disagrees in the vote
 relation commit(X:rm)   # TM orders X to commit
 relation abort(X:rm)    # TM orders X to abort
 
@@ -71,10 +70,39 @@ export rm_abort
 invariant ~(X ~= Y & rm_state(X) = aborted & rm_state(Y) = committed)  
 
 # Safety 2: Commit decision can only be reached if all RM vote agree
-invariant ~(rm_state(X) = committed & rm_state(Y) ~= initial & ~agree(Y) )
+invariant ~(rm_state(X) = committed & rm_state(Y) ~= initial & ~agree(Y))
 
 # Safety 3: If all RM vote agree, then decision must be commit
 invariant (forall X. agree(X) | rm_state(X) = initial) -> (forall X. rm_state(X) ~= aborted)
 
 
-attribute method = bmc[15]
+######################################## Proof ###########################################
+
+# TM does not send both abort and commit
+invariant commit(X) -> ~abort(Y)
+
+# If all RM vote agree, then TM must broadcast commit
+invariant (forall X. agree(X)) -> (forall Y. ~abort(Y))
+
+# No one has decided until leader has decided
+invariant (exists X. rm_state(X) = committed) -> (tm_state = committed) 
+invariant (exists X. rm_state(X) = aborted) -> (tm_state = aborted)
+
+# Leader does not decide until everyone has voted
+invariant (tm_state = committed | tm_state = aborted) -> (forall X. ~rm_state(X) = initial)
+
+# No aborts or commits sent until leader has decided
+invariant (exists X. abort(X) | commit(X)) -> (tm_state ~= initial)
+
+# TM state matches abort/commit broadcast
+invariant tm_state = committed ->  forall X. commit(X)
+invariant tm_state = aborted ->  forall X. abort(X)
+
+# TM does not enter prepared state
+invariant tm_state ~= prepared
+
+# TM can commit if and only if all RM voted agree
+invariant tm_state = committed -> forall X. agree(X)
+invariant tm_state = aborted -> (exists X. ~agree(X) & rm_state(X) ~= initial)
+
+# attribute method = bmc[15]

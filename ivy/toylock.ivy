@@ -1,0 +1,120 @@
+#lang ivy1.7
+
+################################################################################
+#
+# A module containing the axioms of total order
+#
+################################################################################
+
+module total_order(t) = {
+    property [transitivity] X:t < Y & Y < Z -> X < Z
+    property [antisymmetry] ~(X:t < Y & Y < X)
+    property [totality] X:t < Y | X = Y | Y < X
+}
+
+
+################################################################################
+#
+# ADT describing a totally ordered datatype
+#
+################################################################################
+
+isolate num = {
+    type this
+    action succ(x:this) returns (y:this)
+
+    specification {
+        instantiate total_order(this)
+        after succ {
+            assume x < y & ~ (x < Z & Z < y)
+        }
+    }
+
+    implementation {
+        interpret this -> bv[64]
+    }
+}
+
+
+################################################################################
+#
+# ADT describing a ring topology.
+#
+# Nodes are totally ordered and provide a `get_next` action that gets
+# the next element of the ring in round-robin order.
+#
+################################################################################
+
+isolate node = {
+    type this
+    action get_next(x:this) returns (y:this)
+    
+    specification {     
+        instantiate total_order(this)   
+
+        # get_next has the property that either we wrap around (i.e.,
+        # the output is the least element and the input the greatest) or
+        # the output is the successor of the input (i.e., output is greater
+        # than input and there are no elements between). 
+
+        after get_next {
+            ensure (y <= X & X <= x) | (x < y & ~ (x < Z & Z < y))
+        }
+    }
+
+    implementation {
+        interpret this -> bv[1]
+        implement get_next {
+            y := x + 1;
+        }
+    }
+}
+
+
+################################################################################
+#
+# The high-level service specification
+#
+################################################################################
+
+
+relation sent(E:num, N:node)        # Lock with epoch E destined for node N is in the network
+relation has_lock(X:node)           # X holds the lock
+function epoch(X:node) : num        # map each node to an epoch
+
+
+after init {
+    sent(E, N) := false;
+    # One node holds the lock
+    assume exists X:node.(has_lock(X) & forall Y:node.(Y~=X -> ~has_lock(Y)));
+    # Lock holder has epoch 1, everyone has epoch 0
+    assume forall Y:node.(~has_lock(Y) -> Y.epoch = 0);
+    assume forall X:node.( has_lock(X) -> X.epoch > 0)
+}
+
+
+# grant the lock
+action grant(me:node) = {      
+    require has_lock(me);
+    has_lock(me) := false;
+    sent(num.succ(epoch(me)), me.get_next) := true
+}
+
+# accept the lock
+action accept(me:node, ep:num) = {
+    require sent(ep, me);
+    require ep > epoch(me);
+    has_lock(me) := true;
+    epoch(me) := ep
+}
+
+export grant
+export accept
+
+
+# Safety property: No two nodes hold the lock at the same time
+invariant ~(has_lock(X) & has_lock(Y) & X ~= Y)
+
+
+# attribute method = bmc[15]
+        

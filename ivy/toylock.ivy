@@ -10,6 +10,7 @@ module total_order(t) = {
     property [transitivity] X:t < Y & Y < Z -> X < Z
     property [antisymmetry] ~(X:t < Y & Y < X)
     property [totality] X:t < Y | X = Y | Y < X
+    property [exclusion] ~(X:t = Y & (X < Y | Y < X))
 }
 
 
@@ -21,18 +22,9 @@ module total_order(t) = {
 
 isolate num = {
     type this
-    action succ(x:this) returns (y:this)
+    function succ(X:this) = X + 1
 
-    specification {
-        instantiate total_order(this)
-        after succ {
-            assume x < y & ~ (x < Z & Z < y)
-        }
-    }
-
-    implementation {
-        interpret this -> bv[64]
-    }
+    interpret this -> bv[16]
 }
 
 
@@ -78,18 +70,19 @@ isolate node = {
 ################################################################################
 
 
-relation sent(E:num, N:node)        # Lock with epoch E destined for node N is in the network
-relation has_lock(X:node)           # X holds the lock
-function epoch(X:node) : num        # map each node to an epoch
+relation sent(S:node, D:node, E:num) # grant(S, D, E) is in the network
+relation has_lock(X:node)            # X holds the lock
+function epoch(X:node) : num         # map each node to an epoch
 
 
 after init {
-    sent(E, N) := false;
+    sent(S, D, E) := false;
     # One node holds the lock
-    assume exists X:node.(has_lock(X) & forall Y:node.(Y~=X -> ~has_lock(Y)));
-    # Lock holder has epoch 1, everyone has epoch 0
-    assume forall Y:node.(~has_lock(Y) -> Y.epoch = 0);
-    assume forall X:node.( has_lock(X) -> X.epoch > 0)
+    assume exists X.(has_lock(X) & forall Y.(Y~=X -> ~has_lock(Y)));
+    assume has_lock(X) -> epoch(X) < 65534;
+    # Non-holders have smaller epoch than holder
+    assume forall X.(has_lock(X) -> forall Y.(~has_lock(Y) -> epoch(Y) < epoch(X)))
+
 }
 
 
@@ -97,15 +90,16 @@ after init {
 action grant(me:node) = {      
     require has_lock(me);
     has_lock(me) := false;
-    sent(num.succ(epoch(me)), me.get_next) := true
+    sent(me, me.get_next, num.succ(epoch(me))) := true
 }
 
 # accept the lock
 action accept(me:node, ep:num) = {
-    require sent(ep, me);
-    require ep > epoch(me);
-    has_lock(me) := true;
-    epoch(me) := ep
+    require exists X.sent(X, me, ep);
+    if epoch(me) < ep & ep < 65534 {         # overflow for bv[16]
+        has_lock(me) := true;
+        epoch(me) := ep
+    }
 }
 
 export grant
@@ -114,6 +108,46 @@ export accept
 
 # Safety property: No two nodes hold the lock at the same time
 invariant ~(has_lock(X) & has_lock(Y) & X ~= Y)
+
+
+######################################## Proof ###########################################
+
+# Every sent packet has epoch less than src.epoch + 1
+invariant sent(S, D, E) -> E <= num.succ(epoch(S))
+
+# No two grant packets can have the same epoch
+invariant ~(sent(S1, D1, E1) & sent(S2, D2, E2) & E1=E2 & (S1~=S2 | D1~=D2))
+
+# No lock holder with granted larger than its current epoch
+invariant forall S.(has_lock(S) -> (forall D, E. sent(S, D, E) -> E <= epoch(S)))
+
+# No two sends with different epoch for the same dest
+invariant ~(sent(S1, D, E1) & sent(S2, D, E2) &  epoch(D) < E1 &  epoch(D) < E2 & E1 ~= E2)
+
+# Only one grant with ep larger than dest epoch
+invariant forall S1, S2, D1, D2, E1, E2. sent(S1, D1, E1) & sent(S2, D2, E2) & epoch(D1)<E1 & epoch(D2)<E2 -> S1=S2 & D1=D2 & E1=E2 
+
+# Exists grant larger than its dest's current epoch means no one holds lock
+invariant (exists S, D, E. sent(S, D, E) &  epoch(D) < E) -> (forall X. ~has_lock(X))
+
+# Epochs are upper bounded
+invariant epoch(X) < 65534
+invariant sent(S, D, E) -> E <= 65534
+
+# Lock holder has largest epoch
+invariant forall X.(has_lock(X) -> forall Y.(~has_lock(Y) -> epoch(Y) < epoch(X)))
+
+# For each sender, if there is a grant with epoch larger than dest, then it is the largest grant of all
+invariant forall S1, D1, E1.(sent(S1, D1, E1) & epoch(D1)<E1 -> 
+                    (forall S2, D2, E2. sent(S2, D2, E2) -> E2 <= E1)
+                )
+
+# For each sender, if there is a grant with epoch larger than dest, then it is larger than epoch of all nodes
+invariant forall S1, D1, E1.(sent(S1, D1, E1) & epoch(D1)<E1 -> 
+                    (forall X. epoch(X) < E1)
+                )
+
+
 
 
 # attribute method = bmc[15]

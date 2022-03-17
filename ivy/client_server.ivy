@@ -1,0 +1,40 @@
+#lang ivy1.7
+
+type client 
+type server
+
+relation link(X:client, Y:server)
+relation semaphore(X:server)
+
+after init {
+    semaphore(W) := true;
+    link(X, Y) := false
+}
+
+action connect(x:client, y:server) = {
+    require semaphore(y);
+    semaphore(y) := false;
+    link(x, y) := true
+}
+
+action disconnect(x:client, y:server) = {
+    require link(x, y);
+    semaphore(y) := true;
+    link(x, y) := false
+}
+
+export connect
+export disconnect
+
+
+# Clients X and Z cannot both be linked to server Y
+invariant ~(X ~= Z & link(X, Y) & link(Z, Y))  
+
+# If X is connected to Y, then Y cannot still hold its semaphore
+invariant ~(link(X, Y) & semaphore(Y))
+
+
+# attribute method = bmc[5]
+
+
+

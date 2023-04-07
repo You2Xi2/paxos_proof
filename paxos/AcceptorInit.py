@@ -14,7 +14,7 @@ for i in range(10):
         print(m.evaluate(a, model_completion=True))
         AcceptorInit.add(id != m.evaluate(id))
         # if only one parameter changes, fix it
-        # AcceptorInit.add(Id.idx(id) == m.evaluate(Id.idx(id)))
+        AcceptorInit.add(Id.idx(id) == m.evaluate(Id.idx(id)))
     else:
         print("The spec is unrealistic in %d th iteration." % i)
         break

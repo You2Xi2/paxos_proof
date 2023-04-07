@@ -47,7 +47,7 @@ function {:opaque} NextBallot(b:Ballot, idx:nat) : (b':Ballot)
     else Ballot(b.seqNo + 1, idx)
 }
 
-predicate seqIsUnique<T>(a:seq<T>) {
+predicate seqIsUnique<T(==)>(a:seq<T>) {
     forall i, j | 0<=i<|a| && 0<=j<|a| && a[i]==a[j] :: i == j
 }
 

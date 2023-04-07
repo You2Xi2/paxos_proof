@@ -2,8 +2,8 @@ from z3 import *
 
 # Id
 agent = Datatype('agent')
-agent.declare('Ldr')
 agent.declare('Acc')
+agent.declare('Ldr')
 agent = agent.create()
 
 Id = Datatype('Id')

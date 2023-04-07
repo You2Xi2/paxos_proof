@@ -20,6 +20,7 @@ ghost predicate AcceptorInit(a:Acceptor, id:Id) {
     && a.consts == AConsts(id)
     && a.promised == Bottom
     && a.accepted == VB(Nil, Bottom)
+    && id.agt.Acc?
 }
 
 /* Acceptor next state */
@@ -56,6 +57,9 @@ ghost predicate AcceptorNext_RcvPropose(a:Acceptor, a':Acceptor, recvIo:Packet, 
 /* Acceptor send Promise */
 ghost predicate AcceptorPromise(a:Acceptor, a':Acceptor, recvIo:Packet, sendIos:seq<Packet>) 
     requires recvIo.msg.Prepare?
+    // requires !recvIo.msg.bal.Bottom?
+    // requires a.consts.id.agt.Acc?
+    // requires recvIo.src.agt.Ldr?
 {
     && a'.promised == recvIo.msg.bal
     && a'.accepted == a.accepted
@@ -63,6 +67,8 @@ ghost predicate AcceptorPromise(a:Acceptor, a':Acceptor, recvIo:Packet, sendIos:
     && sendIos[0].src == a.consts.id
     && sendIos[0].dst == recvIo.src
     && sendIos[0].msg == Promise(recvIo.msg.bal, a.accepted)
+    && a.consts == a'.consts
+    && recvIo.dst == a.consts.id
 }
 
 /* Acceptor send Accept */

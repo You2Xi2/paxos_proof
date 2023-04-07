@@ -34,6 +34,24 @@ Acceptor = Datatype('Acceptor')
 Acceptor.declare('Acceptor', ('consts', AcceptorConstants), ('promised', Ballot), ('accepted', ValBal))
 Acceptor = Acceptor.create()
 
+# Leader
+LeaderConstants = Datatype('LeaderConstants')
+LeaderConstants.declare('LConsts', ('id', Id), ('accConf', ['accConf_' + x for x in range(3) ]), ('f', IntSort()), ('initval', Value))
+LeaderConstants = LeaderConstants.create()
+
+LeaderState = Datatype('LeaderState')
+LeaderState.declare('P1a')
+LeaderState.declare('P1b')
+LeaderState.declare('P2a')
+LeaderState.declare('P2b')
+LeaderState.declare('Decided')
+LeaderState = LeaderState.create()
+
+Leader = Datatype('Leader')
+Leader.declare('Leader', ('consts', LeaderConstants), ('state', LeaderState), ('ballot', Ballot), ('val', Value), ('promises', ), ('accepts', ))
+Leader = Leader.create()
+
+
 # Packet
 Message = Datatype('Message')
 Message.declare('Prepare', ('bal', Ballot))
@@ -47,4 +65,3 @@ Packet = Datatype('Packet')
 Packet.declare('Packet', ('src', Id), ('dst', Id), ('msg', Message))
 Packet = Packet.create()
 
-Unit

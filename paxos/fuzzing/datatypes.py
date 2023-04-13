@@ -84,3 +84,43 @@ Leader.declare(
     ("accepts", SetSort(Id)),
 )
 Leader = Leader.create()
+
+# Constants
+Constants = Datatype("Constants")
+Constants.declare(
+    "Constants",
+    ("f", IntSort()),
+    ("ldr_ids", SeqSort(Id)),
+    ("ldr_vals", SeqSort(Value)),
+    ("acc_ids", SeqSort(Id)),
+)
+Constants = Constants.create()
+
+# EnvStep
+EnvStep = Datatype("EnvStep")
+EnvStep.declare(
+    "IoStep",
+    ("actor", Id),
+    ("recvIos", SeqSort(Packet)),
+    ("sendIos", SeqSort(Packet)),
+)
+EnvStep = EnvStep.create()
+
+# Environment
+Environment = Datatype("Environment")
+Environment.declare(
+    "Env",
+    ("sentPackets", SeqSort(Packet)),
+    ("nextStep", EnvStep),
+)
+Environment = Environment.create()
+
+# DistrSys
+DistrSys = Datatype("DistrSys")
+DistrSys.declare(
+    "DistrSys",
+    ("network", Environment),
+    ("leaders", SeqSort(Leader)),
+    ("acceptors", SeqSort(Acceptor)),
+)
+DistrSys = DistrSys.create()

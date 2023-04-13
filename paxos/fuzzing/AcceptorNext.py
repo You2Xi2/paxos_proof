@@ -78,3 +78,22 @@ AcceptorNext.add(
         ),
     ),
 )
+
+for i in range(2):
+    if AcceptorNext.check() == sat:
+        print("Found a solution in %d iteration." % i)
+        m = AcceptorNext.model()
+        # print(m.evaluate(Packet.msg(recvIo), model_completion=True))
+        # print(m.evaluate(Message.bal(Packet.msg(recvIo))))
+
+        print(m.evaluate(a, model_completion=True))
+        print(m.evaluate(a_, model_completion=True))
+
+        print("recvIos: ", m.evaluate(recvIos, model_completion=True))
+        print("sendIos: ", m.evaluate(sendIos, model_completion=True))
+
+        AcceptorNext.add(a == m.evaluate(a))
+        AcceptorNext.add(recvIos != m.evaluate(recvIos))
+        AcceptorNext.add(sendIos != m.evaluate(sendIos))
+    else:
+        print("The spec is unrealistic in %d iteration." % i)

@@ -10,8 +10,9 @@ sendIos = Const("sendIos", SeqSort(Packet))
 AcceptorNext.add(Acceptor.consts(a) == Acceptor.consts(a_))
 AcceptorNext.add(Length(recvIos) == 1)
 
+recvIo = recvIos[0]
 b1 = Acceptor.promised(a)
-b2 = Message.bal(Packet.msg(recvIos[0]))
+b2 = Message.bal(Packet.msg(recvIo))
 
 BalLt = And(
     Implies(
@@ -33,10 +34,27 @@ BalLt = And(
 )
 
 BalLtEq = Or(b1 == b2, BalLt)
-# TODO
-AcceptorPromise = Or()
-# TODO
-AcceptorPreempt = Or()
+
+AcceptorPromise = And(
+    Acceptor.promised(a_) == Message.bal(Packet.msg(recvIo)),
+    Acceptor.accepted(a) == Acceptor.accepted(a_),
+    Length(sendIos) == 1,
+    Packet.src(sendIos[0]) == AcceptorConstants.id(Acceptor.consts(a)),
+    Packet.dst(sendIos[0]) == Packet.src(recvIo),
+    Packet.msg(sendIos[0])
+    == Message.Promise(Message.bal(Packet.msg(recvIo)), Acceptor.accepted(a)),
+    Acceptor.consts(a) == Acceptor.consts(a_),
+    Packet.dst(recvIo) == AcceptorConstants.id(Acceptor.consts(a)),
+)
+
+AcceptorPreempt = And(
+    Length(sendIos) == 1,
+    Packet.src(sendIos[0]) == AcceptorConstants.id(Acceptor.consts(a)),
+    Packet.dst(sendIos[0]) == Packet.src(recvIo),
+    Packet.msg(sendIos[0]) == Message.Preempt(Acceptor.promised(a)),
+    Acceptor.promised(a) == Acceptor.promised(a_),
+    Acceptor.accepted(a) == Acceptor.accepted(a_),
+)
 
 AcceptorNext_RcvPrepare = If(BalLt, AcceptorPromise, AcceptorPreempt)
 AcceptorNext_RcvPropose = If(BalLtEq, AcceptorPromise, AcceptorPreempt)

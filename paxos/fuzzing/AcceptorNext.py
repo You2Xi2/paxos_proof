@@ -9,17 +9,29 @@ sendIos = Const("sendIos", SeqSort(Packet))
 
 AcceptorNext.add(Acceptor.consts(a) == Acceptor.consts(a_))
 AcceptorNext.add(Length(recvIos) == 1)
-# TODO
+
+b1 = Acceptor.promised(a)
+b2 = Message.bal(Packet.msg(recvIos[0]))
+
 BalLt = And(
     Implies(
-        Acceptor.promised(a) == Ballot.Bottom,
-        Message.bal(Packet.msg(recvIos[0])) != Ballot.Bottom,
+        Ballot.is_Bottom(b1),
+        Not(Ballot.is_Bottom(b2)),
     ),
     Implies(
-        Acceptor.promised(a) != Ballot.Bottom,
-        If(Message.bal(Packet.msg(recvIos[0])) == Ballot.Bottom, False, If()),
+        Ballot.is_Ballot(b1),
+        If(
+            Ballot.is_Bottom(b2),
+            False,
+            If(
+                Ballot.seqNo(b1) != Ballot.seqNo(b2),
+                Ballot.seqNo(b1) < Ballot.seqNo(b2),
+                Ballot.idx(b1) < Ballot.idx(b2),
+            ),
+        ),
     ),
 )
+
 # TODO
 BalLtEq = Or()
 # TODO

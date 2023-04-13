@@ -3,3 +3,4 @@
 scratch.dfy
 paxos/notes.md
 paxos/sloc-metrics/*.pdf
+paxos/fuzzing/__pycache__

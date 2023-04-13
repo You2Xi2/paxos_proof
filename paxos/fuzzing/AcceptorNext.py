@@ -32,8 +32,7 @@ BalLt = And(
     ),
 )
 
-# TODO
-BalLtEq = Or()
+BalLtEq = Or(b1 == b2, BalLt)
 # TODO
 AcceptorPromise = Or()
 # TODO

@@ -92,7 +92,7 @@ leaders = DistrSys.leaders(ds)
 acceptors = DistrSys.acceptors(ds)
 
 ds_WF = And(
-    c_WF,
+    c_WF,  # requires
     Length(leaders) == Length(ldr_ids),
     Length(acceptors) == Length(acc_ids),
     # (forall i | c.ValidLdrIdx(i) :: leaders[i].consts.id == c.ldr_ids[i])
@@ -189,8 +189,8 @@ def ValidPacketSourceDest(c, ds, p):
 
 sentPackets = Environment.sentPackets(network)
 AllPacketsValid = And(
-    c_WF,
-    ds_WF,
+    c_WF,  # requires
+    ds_WF,  # requires
     # forall p | p in ds.network.sentPackets :: ValidPacketSourceDest(c, ds, p)
     ForAll(
         [i],

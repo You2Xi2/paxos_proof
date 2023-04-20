@@ -272,9 +272,15 @@ requires = And(c_WF, ds_WF, AllPacketsValid)
 
 
 def isAcceptPkt(ds, p):
+    # p in ds.network.sentPackets && p.msg.Accept?
     return Exists(
         [i],
-        And(0 <= i, i < Length(sentPackets), Message.is_Accept(Packet.msg(p))),
+        And(
+            0 <= i,
+            i < Length(sentPackets),
+            sentPackets[i] == p,
+            Message.is_Accept(Packet.msg(p)),
+        ),
     )
 
 

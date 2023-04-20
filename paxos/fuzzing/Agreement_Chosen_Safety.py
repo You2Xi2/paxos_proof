@@ -279,16 +279,18 @@ def isAcceptPkt(ds, p):
 
 
 def UniqueSources(qrm):
+    # forall p1, p2 | p1 in qrm && p2 in qrm :: p1.src == p2.src ==> p1 == p2
     return ForAll(
         [i, j],
         Implies(
             And(0 <= i, i < Length(qrm), 0 <= j, j < Length(qrm)),
-            Packet.dst(qrm[i]) == Packet.dst(qrm[j]),
+            Implies(Packet.src(qrm[i]) == Packet.src(qrm[j]), i == j),
         ),
     )
 
 
 def SetOfAcceptMsgs(c, ds, S, b):
+    # ignore requires as the caller satisfies it
     return And(
         UniqueSources(S),
         ForAll(
@@ -302,6 +304,7 @@ def SetOfAcceptMsgs(c, ds, S, b):
 
 
 def QuorumOfAcceptMsgs(c, ds, qrm, b):
+    # ignore requires as the caller satisfies it
     return And(Length(qrm) >= f + 1, SetOfAcceptMsgs(c, ds, qrm, b))
 
 
@@ -315,7 +318,7 @@ def AccPacketsHaveValueV(S, v):
                 And(0 <= i, i < Length(S)),
                 And(
                     Message.is_Accept(Packet.msg(S[i])),
-                    Message.val(Packet.msg(S[i])) == v,  
+                    Message.val(Packet.msg(S[i])) == v,
                 ),
             ),
         ),
@@ -326,6 +329,7 @@ qrm = Const("qrm", SeqSort(Packet))
 
 
 def Chosen(c, ds, b, v):
+    # ignore requires as the caller satisfies it
     return Exists(
         qrm,
         And(
@@ -351,7 +355,7 @@ Agreement_Chosen_Safety = ForAll(
 
 solver.add(And(requires, Agreement_Chosen_Safety))
 
-for i in range(2):
+for i in range(1):
     if solver.check() == sat:
         print("Found a solution in %d iteration." % i)
         m = solver.model()

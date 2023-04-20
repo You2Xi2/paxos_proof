@@ -11,12 +11,16 @@ ldr_vals = Constants.ldr_vals(c)
 acc_ids = Constants.acc_ids(c)
 
 i = Int("i")
+j = Int("j")
 
-ValidLdrIdx = Function("ValidLdrIdx", IntSort(), BoolSort())
-solver.add(ValidLdrIdx(i) == And(0 <= i, i < Length(ldr_ids)))
 
-ValidAccIdx = Function("ValidAccIdx", IntSort(), BoolSort())
-solver.add(ValidAccIdx(i) == And(0 <= i, i < Length(acc_ids)))
+def ValidLdrIdx(i):
+    return And(0 <= i, i < Length(ldr_ids))
+
+
+def ValidAccIdx(i):
+    return And(0 <= i, i < Length(acc_ids))
+
 
 ValidLdrVals = And(
     Length(ldr_vals) == Length(ldr_ids),
@@ -33,7 +37,7 @@ ValidTypes = And(
     ),
     ForAll(
         [i],
-        Implies(ValidLdrIdx(i), agent.is_Acc(Id.agt(acc_ids[i]))),
+        Implies(ValidAccIdx(i), agent.is_Acc(Id.agt(acc_ids[i]))),
     ),
 )
 
@@ -48,7 +52,6 @@ ValidIds = And(
     ),
 )
 
-j = Int("j")
 UniqueIds = And(
     ForAll(
         [i, j],
@@ -135,100 +138,30 @@ ds_WF = And(
 )
 
 
-# ValidLeaderSource = Function(
-#     "ValidLeaderSource", Constants, DistrSys, Packet, BoolSort()
-# )
-# solver.add(
-#     ValidLeaderSource(c, ds, p)
-#     == And(
-#         agent.is_Ldr(Id.agt(Packet.src(p))), ValidLdrIdx(Id.idx(Packet.src(p)))
-#     )
-# )
 def ValidLeaderSource(c, ds, p):
     return And(
         agent.is_Ldr(Id.agt(Packet.src(p))), ValidLdrIdx(Id.idx(Packet.src(p)))
     )
 
 
-# ValidAcceptorDest = Function(
-#     "ValidAcceptorDest", Constants, DistrSys, Packet, BoolSort()
-# )
-# solver.add(
-#     ValidAcceptorDest(c, ds, p)
-#     == And(
-#         agent.is_Acc(Id.agt(Packet.dst(p))), ValidAccIdx(Id.idx(Packet.dst(p)))
-#     )
-# )
 def ValidAcceptorDest(c, ds, p):
     return And(
         agent.is_Acc(Id.agt(Packet.dst(p))), ValidAccIdx(Id.idx(Packet.dst(p)))
     )
 
 
-# ValidAcceptorSource = Function(
-#     "ValidAcceptorSource", Constants, DistrSys, Packet, BoolSort()
-# )
-# solver.add(
-#     ValidAcceptorSource(c, ds, p)
-#     == ValidAcceptorSource(c, ds, p)
-#     == And(
-#         agent.is_Acc(Id.agt(Packet.src(p))), ValidAccIdx(Id.idx(Packet.src(p)))
-#     )
-# )
 def ValidAcceptorSource(c, ds, p):
     return And(
         agent.is_Acc(Id.agt(Packet.src(p))), ValidAccIdx(Id.idx(Packet.src(p)))
     )
 
 
-# ValidLeaderDest = Function(
-#     "ValidLeaderDest", Constants, DistrSys, Packet, BoolSort()
-# )
-# solver.add(
-#     ValidLeaderDest(c, ds, p)
-#     == And(
-#         agent.is_Ldr(Id.agt(Packet.dst(p))), ValidLdrIdx(Id.idx(Packet.dst(p)))
-#     )
-# )
 def ValidLeaderDest(c, ds, p):
     return And(
         agent.is_Ldr(Id.agt(Packet.dst(p))), ValidLdrIdx(Id.idx(Packet.dst(p)))
     )
 
 
-# p = Consts("p", Packet)
-# ValidPacketSourceDest = Function(
-#     "ValidPacketSourceDest", Constants, DistrSys, Packet, BoolSort()
-# )
-# solver.add(
-#     And(
-#         Implies(
-#             Message.is_Prepare(Packet.msg(p)),
-#             ValidPacketSourceDest(c, ds, p)
-#             == And(ValidLeaderSource(c, ds, p), ValidAcceptorDest(c, ds, p)),
-#         ),
-#         Implies(
-#             Message.is_Promise(Packet.msg(p)),
-#             ValidPacketSourceDest(c, ds, p)
-#             == And(ValidAcceptorSource(c, ds, p), ValidLeaderDest(c, ds, p)),
-#         ),
-#         Implies(
-#             Message.is_Propose(Packet.msg(p)),
-#             ValidPacketSourceDest(c, ds, p)
-#             == And(ValidLeaderSource(c, ds, p), ValidAcceptorDest(c, ds, p)),
-#         ),
-#         Implies(
-#             Message.is_Accept(Packet.msg(p)),
-#             ValidPacketSourceDest(c, ds, p)
-#             == And(ValidAcceptorSource(c, ds, p), ValidLeaderDest(c, ds, p)),
-#         ),
-#         Implies(
-#             Message.is_Preempt(Packet.msg(p)),
-#             ValidPacketSourceDest(c, ds, p)
-#             == And(ValidAcceptorSource(c, ds, p), ValidLeaderDest(c, ds, p)),
-#         ),
-#     )
-# )
 def ValidPacketSourceDest(c, ds, p):
     return And(
         Implies(

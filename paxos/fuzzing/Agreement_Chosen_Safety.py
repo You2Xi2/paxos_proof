@@ -1,7 +1,5 @@
 from datatypes import *
 
-solver = Solver()
-
 c = Const("c", Constants)
 ds = Const("ds", DistrSys)
 
@@ -92,7 +90,7 @@ leaders = DistrSys.leaders(ds)
 acceptors = DistrSys.acceptors(ds)
 
 ds_WF = And(
-    c_WF,  # requires
+    # c_WF,  # requires
     Length(leaders) == Length(ldr_ids),
     Length(acceptors) == Length(acc_ids),
     # (forall i | c.ValidLdrIdx(i) :: leaders[i].consts.id == c.ldr_ids[i])
@@ -189,8 +187,8 @@ def ValidPacketSourceDest(c, ds, p):
 
 sentPackets = Environment.sentPackets(network)
 AllPacketsValid = And(
-    c_WF,  # requires
-    ds_WF,  # requires
+    # c_WF,  # requires
+    # ds_WF,  # requires
     # forall p | p in ds.network.sentPackets :: ValidPacketSourceDest(c, ds, p)
     ForAll(
         [i],
@@ -292,20 +290,48 @@ Agreement_Chosen_Safety = ForAll(
     ),
 )
 
-solver.add(And(requires, Agreement_Chosen_Safety))
+solver = Solver()
 
-for i in range(1):
+solver.add(Ballot.is_Ballot(b1))
+solver.add(Ballot.seqNo(b1) == 3, Ballot.idx(b1) == 4)
+solver.add(Value.val(v1) == 2)
+solver.add(Length(qrm) >= 3)
+solver.add(Message.val(Packet.msg(qrm[0])) == v1)
+solver.add(Message.bal(Packet.msg(qrm[0])) == b1)
+
+bug = And(
+    # QuorumOfAcceptMsgs Length(qrm) >= f + 1 && f != 0 in requires
+    Length(qrm) >= 1,
+    ForAll(
+        [i],
+        Implies(
+            And(0 <= i, i < Length(qrm)),
+            And(
+                # body of AccPacketsHaveValueV
+                Message.is_Accept(Packet.msg(qrm[i])),
+                # body of AccPacketsHaveValueV
+                Message.val(Packet.msg(qrm[i])) == v1,
+                # body of SetOfAcceptMsgs
+                Message.bal(Packet.msg(qrm[i])) == b1,
+            ),
+        ),
+    ),
+)
+solver.add(bug)
+
+
+for i in range(2):
     if solver.check() == sat:
         print("Found a solution in %d iteration." % i)
         m = solver.model()
 
-        print(m.evaluate(c, model_completion=True))
-        print(m.evaluate(ds, model_completion=True))
+        print("qrm: ", m.evaluate(qrm, model_completion=True))
+        # print("c: ", m.evaluate(c, model_completion=True))
+        # print("ds: ", m.evaluate(ds, model_completion=True))
 
-        print("c: ", m.evaluate(c, model_completion=True))
-        print("ds: ", m.evaluate(ds, model_completion=True))
-
-        solver.add(c == m.evaluate(c))
-        solver.add(ds != m.evaluate(ds))
+        solver.add(qrm != m.evaluate(qrm))
+        # solver.add(c != m.evaluate(c))
+        # solver.add(ds != m.evaluate(ds))
     else:
         print("The spec is unrealistic in %d iteration." % i)
+        print(solver.unsat_core())

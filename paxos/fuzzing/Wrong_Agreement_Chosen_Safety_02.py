@@ -214,7 +214,7 @@ def isAcceptPkt(ds, p):
             0 <= i,
             i < Length(sentPackets),
             sentPackets[i] == p,
-            Message.is_Accept(Packet.msg(p)),
+            # Message.is_Accept(Packet.msg(p)),
         ),
     )
 
@@ -258,8 +258,8 @@ def AccPacketsHaveValueV(S, v):
             Implies(
                 And(0 <= i, i < Length(S)),
                 And(
-                    Message.is_Accept(Packet.msg(S[i])),
-                    # Message.val(Packet.msg(S[i])) == v,
+                    # Message.is_Accept(Packet.msg(S[i])),
+                    Message.val(Packet.msg(S[i])) == v,
                 ),
             ),
         ),
@@ -307,10 +307,9 @@ for i in range(2):
         # print(m.evaluate(c, model_completion=True))
         # print(m.evaluate(ds, model_completion=True))
 
-        print("c: ", m.evaluate(c, model_completion=True))
+        # print("c: ", m.evaluate(c, model_completion=True))
         # print("ds: ", m.evaluate(ds, model_completion=True))
         print("qrm: ", m.evaluate(qrm, model_completion=True))
-        print("v1: ", m.evaluate(v1, model_completion=True))
 
         solver.add(c == m.evaluate(c))
         solver.add(ds != m.evaluate(ds))
@@ -318,8 +317,7 @@ for i in range(2):
         print("The spec is unrealistic in %d iteration." % i)
 
 
-# Summary: the spec is wrong because line 262 is removed
-# i.e. Message.val(Packet.msg(S[i])) == v in AccPacketsHaveValueV
-# it's can be manually checked by printing out qrm and v
-# but for exists qrm statement, we may not be able to print qrm out
-# as exists is a weaker constrains than actually finding one qrm (?)
+# Summary: the spec is wrong because line 261 and 217 are removed
+# i.e. Message.is_Accept(Packet.msg(S[i])) in AccPacketsHaveValueV
+# i.e. Message.is_Accept(Packet.msg(p)) in isAcceptPkt
+# it's can be manually checked by looking at qrm

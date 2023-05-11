@@ -139,6 +139,7 @@ ds_WF = And(
 requires = And(c_WF, ds_WF)
 
 v = Const("v", Value)
+b = Const("b", Ballot)
 
 AllProcessesInitV = ForAll([i], Implies(ValidLdrIdx(i), ldr_vals[i] == v))
 
@@ -150,9 +151,11 @@ AllDecidedProcessesDecidesV = ForAll(
             i < Length(leaders),
             LeaderState.is_Decided(Leader.state(leaders[i])),
         ),
-        Leader.val(leaders[i]) == v,
+        # Leader.val(leaders[i]) == v,
+        Leader.ballot(leaders[i]) == b,
     ),
 )
+
 
 Validity = Implies(AllProcessesInitV, AllDecidedProcessesDecidesV)
 
@@ -174,15 +177,18 @@ for i in range(2):
         print("Found a solution in %d iteration." % i)
         m = solver.model()
 
-        # print("c: ", m.evaluate(c, model_completion=True))
-        # print("ds: ", m.evaluate(ds, model_completion=True))
+        print("c: ", m.evaluate(c, model_completion=True))
+        print("ds: ", m.evaluate(ds, model_completion=True))
         print("v: ", m.evaluate(v, model_completion=True))
         print("leaders: ", m.evaluate(leaders, model_completion=True))
 
         solver.add(c != m.evaluate(c))
         solver.add(ds != m.evaluate(ds))
-        solver.add(v != m.evaluate(v))
         solver.add(ExistDecided)
     else:
         print("The spec is unrealistic in %d iteration." % i)
         print(solver.unsat_core())
+
+# Summary: the spec is wrong by replacing line 154 with line 155
+# with ExistDecided constraint to make sure ds has decided leaders
+# This bug can be manually investigated with the fuzzing output 

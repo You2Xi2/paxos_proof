@@ -274,6 +274,16 @@ def Chosen(c, ds, b, v):
     )
 
 
+packet = Const("packet", Packet)
+
+# Id.idx(Packet.src(packet)) == 0
+packet_requirments = Message.is_Accept(Packet.msg(packet))
+# Id.idx(Packet.dst(packet)) == 0
+solver.add(packet_requirments)
+
+qrm_requirements = And(Length(qrm) >= f + 1, qrm[0] == packet)
+solver.add(qrm_requirements)
+
 b1, b2 = Consts("b1 b2", Ballot)
 v1, v2 = Consts("v1 v2", Value)
 

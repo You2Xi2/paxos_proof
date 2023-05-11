@@ -191,3 +191,4 @@ for i in range(2):
 # Summary: the spec is overconstrained by removing line 152
 # it's hard to tell it's buggy by manually check the output
 # because there are still correct outputs
+# but it can be checked by giving some correct variables that can't pass the solver

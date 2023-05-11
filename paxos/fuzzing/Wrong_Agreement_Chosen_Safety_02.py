@@ -320,4 +320,7 @@ for i in range(2):
 # Summary: the spec is wrong because line 261 and 217 are removed
 # i.e. Message.is_Accept(Packet.msg(S[i])) in AccPacketsHaveValueV
 # i.e. Message.is_Accept(Packet.msg(p)) in isAcceptPkt
-# it's can be manually checked by looking at qrm
+# it can't be manually checked by looking at qrm
+# because the qrm itself does not satisfy chosen at first
+# Agreement_Chosen_Safety is an "Implies" spec 
+# z3 solves it here with false Implies true

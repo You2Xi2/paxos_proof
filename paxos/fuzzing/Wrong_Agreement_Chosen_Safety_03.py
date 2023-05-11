@@ -289,15 +289,20 @@ v1, v2 = Consts("v1 v2", Value)
 
 solver.add(Not(Ballot.is_Bottom(b1)))
 
-Agreement_Chosen_Safety = ForAll(
-    [b1, b2, v1, v2],
-    Implies(
-        And(
-            Chosen(c, ds, b1, v1),
-            Chosen(c, ds, b2, v2),
-        ),
-        v1 == v2,
-    ),
+# Agreement_Chosen_Safety = ForAll(
+#     [b1, b2, v1, v2],
+#     Implies(
+#         And(
+#             Chosen(c, ds, b1, v1),
+#             Chosen(c, ds, b2, v2),
+#         ),
+#         v1 == v2,
+#     ),
+# )
+
+Agreement_Chosen_Safety = And(
+    Chosen(c, ds, b1, v1),
+    Chosen(c, ds, b2, v2),
 )
 
 solver.add(And(requires, Agreement_Chosen_Safety))
@@ -324,7 +329,10 @@ for i in range(2):
         print("The spec is unrealistic in %d iteration." % i)
 
 # Summary: the spec is wrong because line 243 is removed
-# i.e.  Message.bal(Packet.msg(S[i])) == b in SetOfAcceptMsgs
+# i.e. Message.bal(Packet.msg(S[i])) == b in SetOfAcceptMsgs
+# case 1: use implies
 # it can be manually checked by printing out qrm and b
 # but it requires setting b1 not bottom because the "default" setting of Ballot is Bottom
-# it takes a while to find a solution
+# case 2: requires Chosen
+# it can be manually checked by printing out qrm and b
+# but it requires setting b1 not bottom because the "default" setting of Ballot is Bottom

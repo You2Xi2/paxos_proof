@@ -284,15 +284,20 @@ solver.add(qrm_requirements)
 b1, b2 = Consts("b1 b2", Ballot)
 v1, v2 = Consts("v1 v2", Value)
 
-Agreement_Chosen_Safety = ForAll(
-    [b1, b2, v1, v2],
-    Implies(
-        And(
-            Chosen(c, ds, b1, v1),
-            Chosen(c, ds, b2, v2),
-        ),
-        v1 == v2,
-    ),
+# Agreement_Chosen_Safety = ForAll(
+#     [b1, b2, v1, v2],
+#     Implies(
+#         And(
+#             Chosen(c, ds, b1, v1),
+#             Chosen(c, ds, b2, v2),
+#         ),
+#         v1 == v2,
+#     ),
+# )
+
+Agreement_Chosen_Safety = And(
+    Chosen(c, ds, b1, v1),
+    Chosen(c, ds, b2, v2),
 )
 
 solver.add(And(requires, Agreement_Chosen_Safety))
@@ -320,6 +325,8 @@ for i in range(2):
 
 # Summary: the spec is wrong because line 262 is removed
 # i.e. Message.val(Packet.msg(S[i])) == v in AccPacketsHaveValueV
+# case 1: use implies
 # it can be manually checked by printing out qrm and v
-# but for exists qrm statement, we may not be able to print qrm out
-# as exists is a weaker constrains than actually finding one qrm (?)
+# case 2: always requires chosen
+# unrealistic in 0 iteration
+# easily figure out something is wrong, but hard to tell what is wrong

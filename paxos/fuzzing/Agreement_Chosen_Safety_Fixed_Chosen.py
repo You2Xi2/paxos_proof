@@ -287,15 +287,20 @@ solver.add(qrm_requirements)
 b1, b2 = Consts("b1 b2", Ballot)
 v1, v2 = Consts("v1 v2", Value)
 
-Agreement_Chosen_Safety = ForAll(
-    [b1, b2, v1, v2],
-    Implies(
-        And(
-            Chosen(c, ds, b1, v1),
-            Chosen(c, ds, b2, v2),
-        ),
-        v1 == v2,
-    ),
+# Agreement_Chosen_Safety = ForAll(
+#     [b1, b2, v1, v2],
+#     Implies(
+#         And(
+#             Chosen(c, ds, b1, v1),
+#             Chosen(c, ds, b2, v2),
+#         ),
+#         v1 == v2,
+#     ),
+# )
+
+Agreement_Chosen_Safety = And(
+    Chosen(c, ds, b1, v1),
+    Chosen(c, ds, b2, v2),
 )
 
 solver.add(And(requires, Agreement_Chosen_Safety))

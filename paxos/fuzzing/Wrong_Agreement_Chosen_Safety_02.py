@@ -259,7 +259,8 @@ def AccPacketsHaveValueV(S, v):
                 And(0 <= i, i < Length(S)),
                 And(
                     # Message.is_Accept(Packet.msg(S[i])),
-                    Message.val(Packet.msg(S[i])) == v,
+                    Message.val(Packet.msg(S[i]))
+                    == v,
                 ),
             ),
         ),
@@ -284,15 +285,20 @@ solver.add(qrm_requirements)
 b1, b2 = Consts("b1 b2", Ballot)
 v1, v2 = Consts("v1 v2", Value)
 
-Agreement_Chosen_Safety = ForAll(
-    [b1, b2, v1, v2],
-    Implies(
-        And(
-            Chosen(c, ds, b1, v1),
-            Chosen(c, ds, b2, v2),
-        ),
-        v1 == v2,
-    ),
+# Agreement_Chosen_Safety = ForAll(
+#     [b1, b2, v1, v2],
+#     Implies(
+#         And(
+#             Chosen(c, ds, b1, v1),
+#             Chosen(c, ds, b2, v2),
+#         ),
+#         v1 == v2,
+#     ),
+# )
+
+Agreement_Chosen_Safety = And(
+    Chosen(c, ds, b1, v1),
+    Chosen(c, ds, b2, v2),
 )
 
 solver.add(And(requires, Agreement_Chosen_Safety))
@@ -320,7 +326,11 @@ for i in range(2):
 # Summary: the spec is wrong because line 261 and 217 are removed
 # i.e. Message.is_Accept(Packet.msg(S[i])) in AccPacketsHaveValueV
 # i.e. Message.is_Accept(Packet.msg(p)) in isAcceptPkt
-# it can't be manually checked by looking at qrm
-# because the qrm itself does not satisfy chosen at first
-# Agreement_Chosen_Safety is an "Implies" spec 
+# case 1: Use imples
+# it can be manually checked by looking at qrm
+# but because the qrm itself does not satisfy chosen at first
+# Agreement_Chosen_Safety is an "Implies" spec
 # z3 solves it here with false Implies true
+# case 2: requires Chosen
+# unrealistic in 0 iteration
+# easy to know bug exists, hard to debug

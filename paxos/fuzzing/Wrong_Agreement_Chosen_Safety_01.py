@@ -259,7 +259,7 @@ def AccPacketsHaveValueV(S, v):
                 And(0 <= i, i < Length(S)),
                 And(
                     Message.is_Accept(Packet.msg(S[i])),
-                    Message.val(Packet.msg(S[i])) == v,
+                    # Message.val(Packet.msg(S[i])) == v,
                 ),
             ),
         ),
@@ -310,8 +310,15 @@ for i in range(2):
         print("c: ", m.evaluate(c, model_completion=True))
         # print("ds: ", m.evaluate(ds, model_completion=True))
         print("qrm: ", m.evaluate(qrm, model_completion=True))
+        print("v1: ", m.evaluate(v1, model_completion=True))
 
         solver.add(c == m.evaluate(c))
         solver.add(ds != m.evaluate(ds))
     else:
         print("The spec is unrealistic in %d iteration." % i)
+
+
+# Summary: the spec is wrong because line 262 is removed
+# it's can be manually checked by printing out qrm and v
+# but for exists qrm statement, we may not be able to print qrm out
+# as exists is a weaker constrains than actually finding one qrm (?)

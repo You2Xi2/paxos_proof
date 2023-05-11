@@ -307,7 +307,7 @@ solver.add(And(requires, Agreement_Chosen_Safety))
 
 # print(Agreement_Chosen_Safety)
 
-for i in range(2):
+for i in range(10):
     if solver.check() == sat:
         print("Found a solution in %d iteration." % i)
         m = solver.model()
@@ -318,6 +318,8 @@ for i in range(2):
         print("c: ", m.evaluate(c, model_completion=True))
         # print("ds: ", m.evaluate(ds, model_completion=True))
         print("qrm: ", m.evaluate(qrm, model_completion=True))
+        print("v1: ", m.evaluate(v1, model_completion=True))
+        print("v2: ", m.evaluate(v2, model_completion=True))
 
         solver.add(c == m.evaluate(c))
         solver.add(ds != m.evaluate(ds))

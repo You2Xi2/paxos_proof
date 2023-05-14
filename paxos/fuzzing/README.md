@@ -15,11 +15,11 @@ This directory fuzzes several specifications of the proof of [the Paxos protocol
   *Fuzzing of the ```Agreement_Chosen_Safety``` specification in [proof_agreement_invariants.dfy](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/proof_agreement_invariants.dfy)*
   - [Agreement_Chosen_Safety](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Agreement_Chosen_Safety.py)  
   *Directly translation of the predicate*  
-  *It's always ```killed``` when running due to the limitation of the Python Z3 library. See the smallest script functioning unexpectedly [here](https://github.com/You2Xi2/paxos_proof/blob/unrealistic_Chosen/paxos/fuzzing/Agreement_Chosen_Safety.py)*  
+  It's always ```killed``` when running due to the limitation of the Python Z3 library. See the smallest script functioning unexpectedly [here](https://github.com/You2Xi2/paxos_proof/blob/unrealistic_Chosen/paxos/fuzzing/Agreement_Chosen_Safety.py).  
   - [Agreement_Chosen_Safety_no_exist](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Agreement_Chosen_Safety_no_exist.py)  
-    *A simplified version of ```Agreement_Chosen_Safety``` predicate*
-    *```Exists``` in ```Chosen``` is removed*
-    Its output doesn't meet the requirement of Chosen because of the ```Implies``` in ```Agreement_Chosen_Safety``` predicate. 
+    *A simplified version of ```Agreement_Chosen_Safety``` predicate*  
+    *```Exists``` in ```Chosen``` is removed*  
+    Its output doesn't meet the requirement of Chosen because of the ```Implies``` in ```Agreement_Chosen_Safety``` predicate.  
     It will generate Empty qrm without Ln.277-282, and qrm with Promise Packet with Ln.277-282, which all conflict with the Chosen requirement.  
   - [Agreement_Chosen_Safety_Fixed_Chosen](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Agreement_Chosen_Safety.py)  
     *A simplified version of ```Agreement_Chosen_Safety``` predicate*

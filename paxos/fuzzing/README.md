@@ -30,7 +30,7 @@ This directory fuzzes several specifications of the proof of [the Paxos protocol
     It's buggy because ```Message.val(Packet.msg(S[i])) == v``` in ```AccPacketsHaveValueV``` (Ln.262) is removed.  
     The output says ```The spec is unrealistic in 0 iteration.```  
     However, it's not logical that a missing requirement leads to unrealistic output. Also, it doesn't give many hints for debugging. 
-  - [Wrong_Agreement_Chosen_Safety_02](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Wrong_Agreement_Chosen_Safety_02.py)
+  - [Wrong_Agreement_Chosen_Safety_02](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Wrong_Agreement_Chosen_Safety_02.py)  
     *Buggy specification without satisfying output*
     It's buggy because ```Message.is_Accept(Packet.msg(S[i]))``` in ```AccPacketsHaveValueV``` (Ln.261) and ```Message.is_Accept(Packet.msg(p))``` in ```isAcceptPkt``` (Ln.217) are removed.  
     The output says ```The spec is unrealistic in 0 iteration.```  

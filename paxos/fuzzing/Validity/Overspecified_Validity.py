@@ -159,9 +159,9 @@ AllDecidedProcessesDecidesV = ForAll(
 Validity = Implies(AllProcessesInitV, AllDecidedProcessesDecidesV)
 
 ExistDecided = And(
-    Length(leaders) >= 5,
+    Length(leaders) >= 4,
     LeaderState.is_Decided(Leader.state(leaders[1])),
-    LeaderState.is_Decided(Leader.state(leaders[3])),
+    LeaderState.is_Decided(Leader.state(leaders[0])),
 )
 
 

@@ -160,9 +160,9 @@ AllDecidedProcessesDecidesV = ForAll(
 Validity = Implies(AllProcessesInitV, AllDecidedProcessesDecidesV)
 
 ExistDecided = And(
-    Length(leaders) >= 5,
+    Length(leaders) >= 4,
     LeaderState.is_Decided(Leader.state(leaders[1])),
-    LeaderState.is_Decided(Leader.state(leaders[3])),
+    LeaderState.is_Decided(Leader.state(leaders[0])),
 )
 
 
@@ -177,8 +177,8 @@ for i in range(2):
         print("Found a solution in %d iteration." % i)
         m = solver.model()
 
-        print("c: ", m.evaluate(c, model_completion=True))
-        print("ds: ", m.evaluate(ds, model_completion=True))
+        # print("c: ", m.evaluate(c, model_completion=True))
+        # print("ds: ", m.evaluate(ds, model_completion=True))
         print("v: ", m.evaluate(v, model_completion=True))
         print("leaders: ", m.evaluate(leaders, model_completion=True))
 
@@ -191,4 +191,4 @@ for i in range(2):
 
 # Summary: the spec is wrong by replacing line 154 with line 155
 # with ExistDecided constraint to make sure ds has decided leaders
-# This bug can be manually investigated with the fuzzing output 
+# This bug can be manually investigated with the fuzzing output

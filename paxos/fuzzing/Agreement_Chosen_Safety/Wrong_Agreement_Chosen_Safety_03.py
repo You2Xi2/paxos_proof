@@ -277,28 +277,8 @@ def Chosen(c, ds, b, v):
     )
 
 
-# packet = Const("packet", Packet)
-# packet_requirments = Message.is_Accept(Packet.msg(packet))
-# solver.add(packet_requirments)
-
-# qrm_requirements = And(Length(qrm) >= f + 1, qrm[0] == packet)
-# solver.add(qrm_requirements)
-
 b1, b2 = Consts("b1 b2", Ballot)
 v1, v2 = Consts("v1 v2", Value)
-
-solver.add(Not(Ballot.is_Bottom(b1)))
-
-# Agreement_Chosen_Safety = ForAll(
-#     [b1, b2, v1, v2],
-#     Implies(
-#         And(
-#             Chosen(c, ds, b1, v1),
-#             Chosen(c, ds, b2, v2),
-#         ),
-#         v1 == v2,
-#     ),
-# )
 
 Agreement_Chosen_Safety = And(
     Chosen(c, ds, b1, v1),
@@ -307,7 +287,7 @@ Agreement_Chosen_Safety = And(
 
 solver.add(And(requires, Agreement_Chosen_Safety))
 
-# print(Agreement_Chosen_Safety)
+solver.add(Ballot.is_Ballot(Message.bal(Packet.msg(qrm[0]))))
 
 for i in range(2):
     if solver.check() == sat:
@@ -318,9 +298,6 @@ for i in range(2):
         # print(m.evaluate(ds, model_completion=True))
 
         # print("c: ", m.evaluate(c, model_completion=True))
-        # print("ds: ", m.evaluate(ds, model_completion=True))
-        print("b1: ", m.evaluate(b1, model_completion=True))
-        print("b2: ", m.evaluate(b2, model_completion=True))
         print("qrm: ", m.evaluate(qrm, model_completion=True))
 
         solver.add(c == m.evaluate(c))

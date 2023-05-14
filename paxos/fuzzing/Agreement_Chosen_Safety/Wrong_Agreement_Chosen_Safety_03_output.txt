@@ -1,0 +1,14 @@
+Found a solution in 0 iteration.
+qrm:  Concat(Unit(Packet(Id(Acc, 9),
+                   Id(Acc, 10),
+                   Accept(Bottom, V(131)))),
+       Unit(Packet(Id(Acc, 1),
+                   Id(Ldr, 1),
+                   Accept(Bottom, V(131)))))
+Found a solution in 1 iteration.
+qrm:  Concat(Unit(Packet(Id(Acc, 8),
+                   Id(Acc, 9),
+                   Accept(Ballot(50, 51), V(59)))),
+       Unit(Packet(Id(Acc, 0),
+                   Id(Ldr, 0),
+                   Accept(Ballot(56, 57), V(59)))))

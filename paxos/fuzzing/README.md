@@ -2,19 +2,42 @@
 This directory fuzzes several specifications of the proof of [the Paxos protocol in Dafny](https://github.com/You2Xi2/paxos_proof), using Z3 library in Python. 
 
 ## Table of Contents
-- [Acceptor_Protocal](https://github.com/You2Xi2/paxos_proof/tree/main/paxos/fuzzing/Acceptor_Protocol) 
+- [Acceptor_Protocal](https://github.com/You2Xi2/paxos_proof/tree/main/paxos/fuzzing/Acceptor_Protocol)  
   *Fuzzing of the protocol of Acceptor, with [original Dafny code](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/agents.dfy)*  
   - [AcceptorInit](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Acceptor_Protocol/AcceptorInit.py)  
+    The data type of ```Acceptor.Id``` is not specified as Acc in this predicate. 
+    Although it doesn't affect the correctness of the whole protocol for requirements in other predicates, it's an useful example with incorrect fuzzing output caught by manual checking. The [fuzzing output](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Acceptor_Protocol/AcceptorInit_output.txt) is wrong in Ln.6 Col.21, as the id of Acceptor should be Acc rather than Ldr. 
   - [AcceptorNext](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Acceptor_Protocol/AcceptorNext.py)
   - [ACceptorPromise](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Acceptor_Protocol/AcceptorPromise.py)  
-- [Agreement_Chosen_Safety](TODO)
-  - [Agreement_Chosen_Safety_Fixed_Chosen]()
-  - [Agreement_Chosen_Safety_no_exist]()
-  - [Agreement_Chosen_Safety]()
-  - [Wrong_Agreement_Chosen_Safety_01]()
-  - [Wrong_Agreement_Chosen_Safety_02]()
-  - [Wrong_Agreement_Chosen_Safety_03]()
+  
+
+- [Agreement_Chosen_Safety](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety)  
+  *Fuzzing of the Agreement_Chosen_Safety specification in [proof_agreement_invariants](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/proof_agreement_invariants.dfy)*
+  - [Agreement_Chosen_Safety](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Agreement_Chosen_Safety.py)  
+  *Directly translation of the predicate*  
+  *It's always ```killed``` when running due to the limitation of the Python Z3 library. See the smallest script functioning unexpectedly [here](https://github.com/You2Xi2/paxos_proof/blob/unrealistic_Chosen/paxos/fuzzing/Agreement_Chosen_Safety.py)*  
+  - [Agreement_Chosen_Safety_no_exist](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Agreement_Chosen_Safety_no_exist.py)  
+    *A simplified version of ```Agreement_Chosen_Safety``` predicate*
+    *```Exists``` in ```Chosen``` is removed*
+    Its output doesn't meet the requirement of Chosen because of the ```Implies``` in ```Agreement_Chosen_Safety``` predicate. 
+    It will generate Empty qrm without Ln.277-282, and qrm with Promise Packet with Ln.277-282, which are all conflict with the Chosen requirement.  
+  - [Agreement_Chosen_Safety_Fixed_Chosen](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Agreement_Chosen_Safety.py)  
+    *A simplified version of ```Agreement_Chosen_Safety``` predicate*
+    *```Exists``` in ```Chosen``` and ```Implies``` in ```Agreement_Chosen_Safety``` are removed*
+    This version of Agreement_Chosen_Safety can generate fuzzing outputs with Chosen requirement. A sample of over 10 different outputs is [here](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Agreement_Chosen_Safety_output.txt) for your convenience because it gets slower after several iterations. 
+  - [Wrong_Agreement_Chosen_Safety_01](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Wrong_Agreement_Chosen_Safety_01.py)  
+  - [Wrong_Agreement_Chosen_Safety_02](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Wrong_Agreement_Chosen_Safety_02.py)
+  - [Wrong_Agreement_Chosen_Safety_03](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Wrong_Agreement_Chosen_Safety_03.py)  
+
+
 - [Validity](https://github.com/You2Xi2/paxos_proof/tree/main/paxos/fuzzing/Validity)  
   - [Validity](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Validity.py)  
   - [Wrong_Validity](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Wrong_Validity.py)  
   - [Overspecified_Validity](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Overspecified_Validity.py)
+
+## Conclusion 
+- Generating fuzzing output is helpful to find under-specified bugs, e.g. [AcceptorInit](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Acceptor_Protocol/AcceptorInit.py) and [Wrong_Validity](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Wrong_Validity.py). However, the output doesn't give enough hints to debug sometimes, e.g. [Wrong_Agreement_Chosen_Safety_01](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Wrong_Agreement_Chosen_Safety_01.py) and [Wrong_Agreement_Chosen_Safety_02](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Wrong_Agreement_Chosen_Safety_02.py). 
+- For over-specified bugs, manually constructed expected output that fails to pass the over-specified requirement is helpful, e.g. [Overspecified_Validity](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Overspecified_Validity.py). 
+- Python Z3 library is handy to generate fuzzing output, but it has some limitations. 
+  - The value of algebra expression data is assigned concerning the order in the datatype definition. This property may avoid it to generate buggy output in the first few iterations.  
+  - Programmer should pay additional attention to ```Exists```, ```ForAll```, and ```Implies``` logic. ```Exists``` and  ```ForAll``` may fail to generate output sometimes. `Implies` sometimes doesn't add constrains to the variables. 

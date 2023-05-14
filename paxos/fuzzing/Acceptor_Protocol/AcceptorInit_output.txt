@@ -1,0 +1,7 @@
+Found a solution in 0 th iteration.
+Id(Acc, 2)
+Acceptor(AConsts(Id(Acc, 2)), Bottom, VB(Nil, Bottom))
+Found a solution in 1 th iteration.
+Id(Ldr, 2)
+Acceptor(AConsts(Id(Ldr, 2)), Bottom, VB(Nil, Bottom))
+The spec is unrealistic in 2 th iteration.

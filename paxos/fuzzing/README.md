@@ -45,13 +45,16 @@ This directory fuzzes several specifications of the proof of [the Paxos protocol
   - [Validity](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Validity.py)  
   *direct translation of ```Validity``` predicate*
   - [Wrong_Validity](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Wrong_Validity.py)  
-  *Buggy specification with incorrect output*
+  *Buggy specification with incorrect output*  
     It's buggy because ```Leader.val(leaders[i]) == v```  (Ln.154) is replaced with ```Leader.ballot(leaders[i]) == b``` (Ln.155) in in ```AllDecidedProcessesDecidesV```.  
-    [The output](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Wrong_Validity_output.txt) is buggy in 2nd iteration because the Value of Decided leaders in leaders (Ln.24, 71) are not the same.  ```ExistDecided``` constraint is needed to give incorrect output in the first few interactions, because the variable is assigned concerning the order of definition of data types. 
-  - [Overspecified_Validity](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Overspecified_Validity.py)
-  *Buggy specification with correct output*
+    [The output](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Wrong_Validity_output.txt) is buggy in 2nd iteration because the Value of Decided leaders in leaders (Ln.24, 71) are not the same.  
+    ```ExistDecided``` constraint is needed to give incorrect output in the first few interactions, because the variable is assigned concerning the order of definition of data types. 
+  - [Overspecified_Validity](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Overspecified_Validity.py)  
+  *Buggy specification with correct output*  
     It's buggy because ```LeaderState.is_Decided(Leader.state(leaders[i]))```  (Ln.152) is removed in ```AllDecidedProcessesDecidesV```.  
-    [The output](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Overspecified_Validity_output.txt) is still correct because the missing constraint in precondition leads to a stronger requirement.   ```ExistDecided``` constraint is needed because the variable is assigned concerning the order of definition of data types. 
+    [The output](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Overspecified_Validity_output.txt) is still correct because the missing constraint in precondition leads to a stronger requirement.  
+    However, it's doable to construct an expected output that can't pass the soler. 
+    ```ExistDecided``` constraint is needed because the variable is assigned concerning the order of definition of data types. 
 
 ## Conclusion 
 - Generating fuzzing output is helpful to find under-specified bugs, e.g. [AcceptorInit](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Acceptor_Protocol/AcceptorInit.py), [Wrong_Agreement_Chosen_Safety_03](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Wrong_Agreement_Chosen_Safety_03.py), and [Wrong_Validity](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Validity/Wrong_Validity.py). However, sometimes the output doesn't give enough hints to debug, e.g. [Wrong_Agreement_Chosen_Safety_01](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Wrong_Agreement_Chosen_Safety_01.py) and [Wrong_Agreement_Chosen_Safety_02](https://github.com/You2Xi2/paxos_proof/blob/main/paxos/fuzzing/Agreement_Chosen_Safety/Wrong_Agreement_Chosen_Safety_02.py). 

@@ -277,12 +277,12 @@ def Chosen(c, ds, b, v):
     )
 
 
-packet = Const("packet", Packet)
-packet_requirments = Message.is_Accept(Packet.msg(packet))
-solver.add(packet_requirments)
+# packet = Const("packet", Packet)
+# packet_requirments = Message.is_Accept(Packet.msg(packet))
+# solver.add(packet_requirments)
 
-qrm_requirements = And(Length(qrm) >= f + 1, qrm[0] == packet)
-solver.add(qrm_requirements)
+# qrm_requirements = And(Length(qrm) >= f + 1, qrm[0] == packet)
+# solver.add(qrm_requirements)
 
 b1, b2 = Consts("b1 b2", Ballot)
 v1, v2 = Consts("v1 v2", Value)
